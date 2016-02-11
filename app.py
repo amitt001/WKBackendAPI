@@ -46,9 +46,7 @@ def getTablesInfo():
 def runSparkJob():
         payload = request.get_json()
         jobResponse = cStringIO.StringIO()
-        print json.dumps(payload)
         curlreq = pycurl.Curl()
-        print json.dumps(payload)
         url = 'http://172.16.248.156:8090/jobs?appName=check&classPath=DataChecks.basicStats'
         curlreq.setopt(pycurl.URL, url)
         curlreq.setopt(pycurl.HTTPHEADER, ['Accept: application/json'])
@@ -68,14 +66,12 @@ def runSparkJob():
 def getResults():
         jobResponse = cStringIO.StringIO()
         jobIds = request.get_json()
-        print jobIds
         for jobId in jobIds:
                 url = 'http://172.16.248.156:8090/jobs/' + jobId
                 r = requests.get(url)
                 response = json.loads(r.text)
                 result = response['result']
                 result = json.loads(result)
-                print "done"
                 newresult = {}
                 for k in result.iterkeys():
                         if k != "ARROWUSER_ARV_ENTITY":
@@ -83,7 +79,6 @@ def getResults():
                                 for j in newresult[k].iterkeys():
                                         newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
                 response['result'] = newresult
-                print response['status']
                 if response['status'] == "FINISHED" or response['status'] == "ERROR":
                         db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
         result = listConfigs()
@@ -96,7 +91,6 @@ def listConfigs():
         json_docs = []
         for doc in cursor:
                 json_docs.append(doc)
-        print json.dumps(json_docs)
         return jsonify({'data': json_docs})
 
 #@app.route('/addConfigs', methods = ['POST'])
