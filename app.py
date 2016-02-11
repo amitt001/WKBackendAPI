@@ -12,7 +12,7 @@ app = Flask(__name__)
 cors = CORS(app)
 
 #Creating dependency objects
-client = MongoClient(host="127.0.0.1")
+client = MongoClient(host="172.16.248.156")
 db = client.WK
 
 
@@ -29,7 +29,7 @@ def index():
     )
 
 def Mapping(col):
-	return ast.literal_eval(col)
+        return ast.literal_eval(col)
 
 @app.route('/getTablesInfo')
 @cross_origin()
@@ -37,79 +37,90 @@ def getTablesInfo():
     cursor = db.tables.find({},{'_id':0})
     json_docs = []
     for doc in cursor:
-		doc['columns'] = map( Mapping, doc['columns'])
-		json_docs.append(doc)
+                doc['columns'] = map( Mapping, doc['columns'])
+                json_docs.append(doc)
     return jsonify({'data': json_docs})
 
 @app.route('/postJob', methods = ['POST'])
 @cross_origin()
 def runSparkJob():
-	payload = request.get_json()
-	jobResponse = cStringIO.StringIO()
-	print json.dumps(payload)
-	curlreq = pycurl.Curl()
-	print json.dumps(payload)
-	url = 'http://172.16.248.156:8090/jobs?appName=check&classPath=DataChecks.basicStats'
-	curlreq.setopt(pycurl.URL, url)
-	curlreq.setopt(pycurl.HTTPHEADER, ['Accept: application/json'])
-	curlreq.setopt(pycurl.POST, 1)
-	curlreq.setopt(curlreq.WRITEFUNCTION, jobResponse.write)
-	curlreq.setopt(pycurl.POSTFIELDS, json.dumps(payload))
-	curlreq.perform()
-	js = json.loads(json.dumps(payload))
-	curlreq.close()
-	js['response'] = json.loads(jobResponse.getvalue())
-	js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
-	db.configs.save(js)
-	return jobResponse.getvalue()
+        payload = request.get_json()
+        jobResponse = cStringIO.StringIO()
+        print json.dumps(payload)
+        curlreq = pycurl.Curl()
+        print json.dumps(payload)
+        url = 'http://172.16.248.156:8090/jobs?appName=check&classPath=DataChecks.basicStats'
+        curlreq.setopt(pycurl.URL, url)
+        curlreq.setopt(pycurl.HTTPHEADER, ['Accept: application/json'])
+        curlreq.setopt(pycurl.POST, 1)
+        curlreq.setopt(curlreq.WRITEFUNCTION, jobResponse.write)
+        curlreq.setopt(pycurl.POSTFIELDS, json.dumps(payload))
+        curlreq.perform()
+        js = json.loads(json.dumps(payload))
+        curlreq.close()
+        js['response'] = json.loads(jobResponse.getvalue())
+        js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
+        db.configs.save(js)
+        return jobResponse.getvalue()
 
 @app.route('/getResults', methods = ['POST'])
 @cross_origin()
 def getResults():
-	jobResponse = cStringIO.StringIO()
-	jobIds = request.get_json()
-	print jobIds
-	for jobId in jobIds:
-		url = 'http://172.16.248.156:8090/jobs/' + jobId
-		r = requests.get(url)
-		response = json.loads(r.text)
-		print response['status']
-		if response['status'] == "FINISHED" or response['status'] == "ERROR":
-			db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
-	result = listConfigs()
-	return result
+        jobResponse = cStringIO.StringIO()
+        jobIds = request.get_json()
+        print jobIds
+        for jobId in jobIds:
+                url = 'http://172.16.248.156:8090/jobs/' + jobId
+                r = requests.get(url)
+                response = json.loads(r.text)
+                result = response['result']
+                result = json.loads(result)
+                print "done"
+                newresult = {}
+                for k in result.iterkeys():
+                        if k != "ARROWUSER_ARV_ENTITY":
+                                newresult[k] = json.loads(result[k])
+                                for j in newresult[k].iterkeys():
+                                        newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+                response['result'] = newresult
+                print response['status']
+                if response['status'] == "FINISHED" or response['status'] == "ERROR":
+                        db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
+        result = listConfigs()
+        return result
 
 @app.route('/listConfigs')
 @cross_origin()
 def listConfigs():
-	cursor = db.configs.find({},{'_id':0})
-	json_docs = []
-	for doc in cursor:
-		json_docs.append(doc)
-	print json.dumps(json_docs)
-	return jsonify({'data': json_docs})
+        cursor = db.configs.find({},{'_id':0})
+        json_docs = []
+        for doc in cursor:
+                json_docs.append(doc)
+        print json.dumps(json_docs)
+        return jsonify({'data': json_docs})
 
 #@app.route('/addConfigs', methods = ['POST'])
+
 #@cross_origin()
 #def addConfigs():
-#	config = request.get_json()
-#	db.configs.save(config)
-#	return "True"
+#       config = request.get_json()
+#       db.configs.save(config)
+#       return "True"
 
 @app.route('/getConfig', methods = ['POST'])
 @cross_origin()
 def getConfig():
-	configName = request.get_json()
-	cursor = db.configs.find({'configName': configName}, {'_id':0})
-	json_docs = []
-	for doc in cursor:
-		json_docs.append(doc)
-	return jsonify({'data': json_docs})
+        configName = request.get_json()
+        cursor = db.configs.find({'configName': configName}, {'_id':0})
+        json_docs = []
+        for doc in cursor:
+                json_docs.append(doc)
+        return jsonify({'data': json_docs})
 
 @app.route('/reRunJob', methods = ['POST'])
 @cross_origin()
 def saveResults():
-	return "True"
+        return "True"
 
 
 if __name__ == '__main__':
