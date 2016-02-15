@@ -7,12 +7,14 @@ from flask.ext.cors import CORS, cross_origin
 import cStringIO
 import ast
 import requests
+import re
 
 app = Flask(__name__)
 cors = CORS(app)
 
 #Creating dependency objects
-client = MongoClient(host="172.16.248.156")
+# client = MongoClient(host="172.16.248.156")
+client = MongoClient()
 db = client.WK
 
 
@@ -116,6 +118,90 @@ def getConfig():
 def saveResults():
         return "True"
 
+
+# Added code for Linkage
+
+def ngram(sentence,n):
+    sentence = sentence.lower()
+    sentence = re.sub('[^0-9a-zA-Z]+', ' ', sentence)
+    sentence = re.sub('[ ]+', ' ', sentence)
+    opResult = []
+    splittedSentence = sentence.split(" ")
+    for x in xrange(len(splittedSentence)):
+        if x+n<=len(splittedSentence):
+            grams = " ".join(splittedSentence[x:x+n])
+            opResult.append(grams)
+    return opResult
+
+def getMostFrequentWord(resultList):
+    most_frequent_words = ""
+    opResultFinal = []
+    for result in resultList:
+        ngram1 = ngram(result,1)
+        ngram2 = ngram(result,2)
+        opResultFinal.extend(ngram1)
+        opResultFinal.extend(ngram2)
+
+    opWordCount = {}
+    for element in opResultFinal:
+        if element not in opWordCount:
+            opWordCount[element] = 1
+        else:
+            opWordCount[element] = opWordCount[element] + 1
+
+    most_frequent_words = sorted(opWordCount.items(), key=lambda x: (x[1], len(x[0])), reverse = True)[0][0]
+    return most_frequent_words.title()
+
+
+@app.route('/cluster/getClustersInfo', methods = ['POST'])
+@cross_origin()
+def getClusterInfo():
+    # source,version
+    payload = json.loads(request.get_json()['data'])
+    source = payload['source']
+    version = payload['version']
+    opData = {"name" : "bubble","children" : []}
+    clusterCount = db.Linkage.aggregate([{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
+    idCount = 0
+    for doc in clusterCount:
+        idCount = idCount + 1
+        opNameList = []
+        for clusterElement in db.Linkage.find({"source":source, "version":str(version), "clusterId":doc["_id"]}):
+            opNameList.append(clusterElement['name'])
+        listLength = len(opNameList)
+        clusterName = getMostFrequentWord(opNameList)
+        clusterSize = listLength
+        singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"value" : "100","name" : clusterName,"score" : clusterSize,"id" : idCount}]}
+        opData["children"].append(singleCluster)
+    return jsonify({'data':opData})
+
+@app.route('/cluster/getTablesInfo')
+@cross_origin()
+def getClusterTablesInfo():
+    opData = {}
+    for source in db.Linkage.distinct("source"):
+        opData[source] = db.Linkage.find({"source":source}).distinct("version")
+    return jsonify({'data':opData})
+
+@app.route('/cluster/getClustersList', methods = ['POST'])
+@cross_origin()
+def getClustersList():
+    payload = json.loads(request.get_json()['data'])
+    source = payload['source']
+    version = payload['version']
+    clusterId = payload['clusterId']
+    opList = []
+    for doc in db.Linkage.find({"source":source,"version":version,"clusterId":clusterId}):
+        opList.append(doc['name'])
+    return jsonify({'data':opList})
+
+@app.route('/cluster/clear')
+@cross_origin()
+def clearClusterResult():
+    payload = request.get_json()
+    source = payload['source']
+    version = payload['version']
+    db.Linkage.remove({"source":source,"version":version})
 
 if __name__ == '__main__':
     app.run(host = "0.0.0.0", port = 5111, debug = True)
