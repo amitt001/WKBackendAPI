@@ -156,24 +156,25 @@ def getMostFrequentWord(resultList):
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
 @cross_origin()
 def getClusterInfo():
-    # source,version
-    payload = json.loads(request.get_json()['data'])
+    payload = ast.literal_eval(request.data)
     source = payload['source']
     version = payload['version']
     opData = {"name" : "bubble","children" : []}
-    clusterCount = db.Linkage.aggregate([{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
+    clusterCount = db.Linkage.aggregate([{"$match":{"source":source,"version":version}},{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
     idCount = 0
     for doc in clusterCount:
         idCount = idCount + 1
         opNameList = []
-        for clusterElement in db.Linkage.find({"source":source, "version":str(version), "clusterId":doc["_id"]}):
+        for clusterElement in db.Linkage.find({"source":source, "version":version, "clusterId":doc["_id"]}):
             opNameList.append(clusterElement['name'])
+	
         listLength = len(opNameList)
         clusterName = getMostFrequentWord(opNameList)
         clusterSize = listLength
-        singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"value" : "100","name" : clusterName,"score" : clusterSize,"id" : idCount}]}
+        singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : idCount}]}
         opData["children"].append(singleCluster)
-    return jsonify({'data':opData})
+    
+    return jsonify(**opData)
 
 @app.route('/cluster/getTablesInfo')
 @cross_origin()
@@ -186,14 +187,14 @@ def getClusterTablesInfo():
 @app.route('/cluster/getClustersList', methods = ['POST'])
 @cross_origin()
 def getClustersList():
-    payload = json.loads(request.get_json()['data'])
+    payload = ast.literal_eval(request.data)
     source = payload['source']
     version = payload['version']
     clusterId = payload['clusterId']
     opList = []
     for doc in db.Linkage.find({"source":source,"version":version,"clusterId":clusterId}):
         opList.append(doc['name'])
-    return jsonify({'data':opList})
+    return jsonify(**{'data':opList})
 
 @app.route('/cluster/clear')
 @cross_origin()
