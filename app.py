@@ -84,8 +84,8 @@ def getResults():
                     response['result'] = newresult
                 if response['status'] == "FINISHED" or response['status'] == "ERROR":
                         db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
-        result = listConfigs()
-        return result
+        results = listConfigs()
+        return results
 
 @app.route('/listConfigs')
 @cross_origin()
