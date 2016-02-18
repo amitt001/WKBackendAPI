@@ -75,12 +75,13 @@ def getResults():
                 result = response['result']
                 result = json.loads(result)
                 newresult = {}
-                for k in result.iterkeys():
-                        if k != "ARROWUSER_ARV_ENTITY":
-                                newresult[k] = json.loads(result[k])
-                                for j in newresult[k].iterkeys():
-                                        newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
-                response['result'] = newresult
+                if response['status'] == "FINISHED":
+                    for k in result.iterkeys():
+                            if k != "ARROWUSER_ARV_ENTITY":
+                                    newresult[k] = json.loads(result[k])
+                                    for j in newresult[k].iterkeys():
+                                            newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+                    response['result'] = newresult
                 if response['status'] == "FINISHED" or response['status'] == "ERROR":
                         db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
         result = listConfigs()
