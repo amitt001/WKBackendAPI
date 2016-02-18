@@ -149,8 +149,12 @@ def getMostFrequentWord(resultList):
         else:
             opWordCount[element] = opWordCount[element] + 1
 
-    most_frequent_words = sorted(opWordCount.items(), key=lambda x: (x[1], len(x[0])), reverse = True)[0][0]
-    return most_frequent_words.title()
+    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (x[1], len(x[0])), reverse = True)[0:3]
+    most_frequent_words = ""
+    for word in most_frequent_words_list:
+        most_frequent_words = most_frequent_words + " " + word[0]
+
+    return trim(most_frequent_words).title()
 
 
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
@@ -160,18 +164,27 @@ def getClusterInfo():
     source = payload['source']
     version = payload['version']
     opData = {"name" : "bubble","children" : []}
-    clusterCount = db.Linkage.aggregate([{"$match":{"source":source,"version":version}},{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
+    pipeline = [{"$match":{"source":source,"version":version}}]
+    
+    # Added search functionality in cluster
+    if 'search' in payload and trim(payload['search']) != "":
+        pipeline.extend([{ "$match": { "$text": { "$search": payload['search'] } } }])
+
+    pipeline.extend([{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
+
+    clusterCount = db.Linkage.aggregate()
     idCount = 0
     for doc in clusterCount:
+        currentDocId = doc["_id"]
         idCount = idCount + 1
         opNameList = []
-        for clusterElement in db.Linkage.find({"source":source, "version":version, "clusterId":doc["_id"]}):
+        for clusterElement in db.Linkage.find({"source":source, "version":version, "clusterId":currentDocId}):
             opNameList.append(clusterElement['name'])
 	
         listLength = len(opNameList)
         clusterName = getMostFrequentWord(opNameList)
         clusterSize = listLength
-        singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : idCount}]}
+        singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
         opData["children"].append(singleCluster)
     
     return jsonify(**opData)
