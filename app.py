@@ -176,7 +176,7 @@ def getClusterInfo():
 
     pipeline.extend([{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
 
-    clusterCount = db.Linkage.aggregate()
+    clusterCount = db.Linkage.aggregate(pipeline)
     idCount = 0
     for doc in clusterCount:
         currentDocId = doc["_id"]
