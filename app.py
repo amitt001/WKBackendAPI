@@ -71,12 +71,10 @@ def getResults():
         for jobId in jobIds:
                 url = 'http://172.16.248.156:8090/jobs/' + jobId
                 r = requests.get(url)
-		print url
                 response = json.loads(r.text)
-		print response
                 result = response['result']
+		result = json.loads(result)
                 newresult = {}
-		print newresult
                 if response['status'] == "FINISHED":
                     for k in result.iterkeys():
                             if k != "ARROWUSER_ARV_ENTITY":
@@ -84,7 +82,6 @@ def getResults():
                                     for j in newresult[k].iterkeys():
                                             newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
                     response['result'] = newresult
-		print newresult
                 if response['status'] == "FINISHED" or response['status'] == "ERROR":
                         db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
         results = listConfigs()
@@ -158,7 +155,7 @@ def getMostFrequentWord(resultList):
     for word in most_frequent_words_list:
         most_frequent_words = most_frequent_words + " " + word[0]
 
-    return trim(most_frequent_words).title()
+    return most_frequent_words.strip().title()
 
 
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
@@ -168,14 +165,15 @@ def getClusterInfo():
     source = payload['source']
     version = payload['version']
     opData = {"name" : "bubble","children" : []}
-    pipeline = [{"$match":{"source":source,"version":version}}]
-    
+
     # Added search functionality in cluster
-    if 'search' in payload and trim(payload['search']) != "":
-        pipeline.extend([{ "$match": { "$text": { "$search": payload['search'] } } }])
+    if 'search' in payload:
+        pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+    else:
+        pipeline = []
 
-    pipeline.extend([{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
-
+    pipeline.extend([{"$match":{"source":source,"version":version}},{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
+    
     clusterCount = db.Linkage.aggregate(pipeline)
     idCount = 0
     for doc in clusterCount:
@@ -190,7 +188,7 @@ def getClusterInfo():
         clusterSize = listLength
         singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
         opData["children"].append(singleCluster)
-    
+
     return jsonify(**opData)
 
 @app.route('/cluster/getTablesInfo')
