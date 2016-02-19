@@ -71,10 +71,12 @@ def getResults():
         for jobId in jobIds:
                 url = 'http://172.16.248.156:8090/jobs/' + jobId
                 r = requests.get(url)
+		print url
                 response = json.loads(r.text)
+		print response
                 result = response['result']
-                result = json.loads(result)
                 newresult = {}
+		print newresult
                 if response['status'] == "FINISHED":
                     for k in result.iterkeys():
                             if k != "ARROWUSER_ARV_ENTITY":
@@ -82,6 +84,7 @@ def getResults():
                                     for j in newresult[k].iterkeys():
                                             newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
                     response['result'] = newresult
+		print newresult
                 if response['status'] == "FINISHED" or response['status'] == "ERROR":
                         db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
         results = listConfigs()
