@@ -174,7 +174,7 @@ def getMostFrequentWord(resultList):
 
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
 @cross_origin()
-def getClusterInfo():
+def getClustersInfo():
     payload = ast.literal_eval(request.data)
     source = payload['source']
     version = payload['version']
@@ -206,6 +206,68 @@ def getClusterInfo():
         singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
         opData["children"].append(singleCluster)
 
+    return jsonify(**opData)
+
+@app.route('/cluster/getClustersHistogram', methods = ['POST'])
+@cross_origin()
+def getClustersHistogram():
+    payload = ast.literal_eval(request.data)
+    # payload = {"source":"E1","version":"3.5 - All Data"}
+    source = payload['source']
+    version = payload['version']
+    opData = {"name" : "bubble","children" : []}
+
+    # Added search functionality in cluster
+    if 'search' in payload:
+        if payload['search'].strip() != '':
+            pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+        else:
+            pipeline = []
+    else:
+        pipeline = []
+
+    pipeline.extend([
+        {"$match":{"source":source,"version":version}},
+        {"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},
+        {"$group" : {"_id":"$count", "frequency":{"$sum":1}}},
+        ])
+
+    resultBreakOut = {
+                        "1-2":{"value":0,"order":0},
+                        "3-5":{"value":0,"order":1},
+                        "6-10":{"value":0,"order":2},
+                        "11-50":{"value":0,"order":3},
+                        "51-100":{"value":0,"order":4},
+                        "101-500":{"value":0,"order":5},
+                        "501-1000":{"value":0,"order":6},
+                        "1001-5000":{"value":0,"order":7},
+                        "5000+":{"value":0,"order":8},
+                    }
+    clusterFrequencyResults = db.Linkage.aggregate(pipeline)
+    for clusterFrequencyResult in clusterFrequencyResults:
+        clusterSize = clusterFrequencyResult['_id']
+        clusterFrequency = clusterFrequencyResult['frequency']
+        if clusterSize<3:
+            resultBreakOut["1-2"]['value'] += clusterFrequency
+        elif clusterSize<6:
+            resultBreakOut["3-5"]['value'] += clusterFrequency
+        elif clusterSize<11:
+            resultBreakOut["6-10"]['value'] += clusterFrequency
+        elif clusterSize<51:
+            resultBreakOut["11-50"]['value'] += clusterFrequency
+        elif clusterSize<101:
+            resultBreakOut["51-100"]['value'] += clusterFrequency
+        elif clusterSize<501:
+            resultBreakOut["101-500"]['value'] += clusterFrequency
+        elif clusterSize<1001:
+            resultBreakOut["501-1000"]['value'] += clusterFrequency
+        elif clusterSize<5001:
+            resultBreakOut["1001-5000"]['value'] += clusterFrequency
+        else:
+            resultBreakOut["5000+"]['value'] += clusterFrequency
+    opData = {"Freq":[],"type":"Frequency"}
+    for clusterSize,clusterFrequencyAndOrder in resultBreakOut.iteritems():
+        opData["Freq"].append({"x":clusterSize,"y":clusterFrequencyAndOrder['value'],"order":clusterFrequencyAndOrder['order']})
     return jsonify(**opData)
 
 @app.route('/cluster/getTablesInfo')
