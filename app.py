@@ -145,10 +145,10 @@ def getMostFrequentWord(resultList):
     opResultFinal = []
     for resultWord in resultList:
         result = resultWord.split(" - ")[0]
-        ngram2 = ngram(result,2).reverse()
-        ngram3 = ngram(result,3).reverse()
-        ngram4 = ngram(result,4).reverse()
-        ngram5 = ngram(result,5).reverse()
+        ngram2 = ngram(result,2)[::-1]
+        ngram3 = ngram(result,3)[::-1]
+        ngram4 = ngram(result,4)[::-1]
+        ngram5 = ngram(result,5)[::-1]
         opResultFinal.extend(ngram2)
         opResultFinal.extend(ngram3)
         opResultFinal.extend(ngram4)
@@ -166,7 +166,6 @@ def getMostFrequentWord(resultList):
         if word_and_count[1]*1.0/listLength>.8:
             return word_and_count[0].strip().title()
     return most_frequent_words_list[0][0].strip().title()
-
 
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
 @cross_origin()
