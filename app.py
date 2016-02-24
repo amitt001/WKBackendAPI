@@ -243,8 +243,8 @@ def getClustersHistogram():
         ])
 
     resultBreakOut = {
-                        "1-2":{"value":0,"order":0},
-                        "3-5":{"value":0,"order":1},
+                        "1":{"value":0,"order":0},
+                        "2-5":{"value":0,"order":1},
                         "6-10":{"value":0,"order":2},
                         "11-50":{"value":0,"order":3},
                         "51-100":{"value":0,"order":4},
@@ -253,29 +253,41 @@ def getClustersHistogram():
                         "1001-5000":{"value":0,"order":7},
                         "5001+":{"value":0,"order":8},
                     }
+    numberOfUniqueEntities = 0
+    numberOfClusters = 0
     clusterFrequencyResults = db.Linkage.aggregate(pipeline)
     for clusterFrequencyResult in clusterFrequencyResults:
         clusterSize = clusterFrequencyResult['_id']
         clusterFrequency = clusterFrequencyResult['frequency']
-        if clusterSize<3:
-            resultBreakOut["1-2"]['value'] += clusterFrequency
+        if clusterSize<2:
+            resultBreakOut["1"]['value'] += clusterFrequency
+            numberOfUniqueEntities += clusterFrequency
         elif clusterSize<6:
-            resultBreakOut["3-5"]['value'] += clusterFrequency
+            resultBreakOut["2-5"]['value'] += clusterFrequency
+            numberOfClusters += clusterFrequency
         elif clusterSize<11:
             resultBreakOut["6-10"]['value'] += clusterFrequency
+            numberOfClusters += clusterFrequency
         elif clusterSize<51:
             resultBreakOut["11-50"]['value'] += clusterFrequency
+            numberOfClusters += clusterFrequency
         elif clusterSize<101:
             resultBreakOut["51-100"]['value'] += clusterFrequency
+            numberOfClusters += clusterFrequency
         elif clusterSize<501:
             resultBreakOut["101-500"]['value'] += clusterFrequency
+            numberOfClusters += clusterFrequency
         elif clusterSize<1001:
             resultBreakOut["501-1000"]['value'] += clusterFrequency
+            numberOfClusters += clusterFrequency
         elif clusterSize<5001:
             resultBreakOut["1001-5000"]['value'] += clusterFrequency
+            numberOfClusters += clusterFrequency
         else:
             resultBreakOut["5001+"]['value'] += clusterFrequency
-    opData = {"Freq":[],"type":"Frequency"}
+            numberOfClusters += clusterFrequency
+
+    opData = {"Freq":[],"type":"Frequency","numberOfClusters":numberOfClusters,"numberOfUniqueEntities":numberOfUniqueEntities}
     for clusterSize,clusterFrequencyAndOrder in resultBreakOut.iteritems():
         opData["Freq"].append({"x":clusterSize,"y":clusterFrequencyAndOrder['value'],"order":clusterFrequencyAndOrder['order']})
     return jsonify(**opData)
