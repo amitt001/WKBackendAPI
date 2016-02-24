@@ -73,14 +73,14 @@ def getResults():
                 r = requests.get(url)
                 response = json.loads(r.text)
                 result = response['result']
-		result = json.loads(result)
-                newresult = {}
+		newresult = {}
                 if response['status'] == "FINISHED":
+		    result = json.loads(result)	
                     for k in result.iterkeys():
-                            if k != "ARROWUSER_ARV_ENTITY":
-                                    newresult[k] = json.loads(result[k])
-                                    for j in newresult[k].iterkeys():
-                                            newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+                            newresult[k] = json.loads(result[k])
+                            for j in newresult[k].iterkeys():
+                            	newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+				newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
                     response['result'] = newresult
                 if response['status'] == "FINISHED" or response['status'] == "ERROR":
                         db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
@@ -96,13 +96,13 @@ def listConfigs():
                 json_docs.append(doc)
         return jsonify({'data': json_docs})
 
-#@app.route('/addConfigs', methods = ['POST'])
-
-#@cross_origin()
-#def addConfigs():
-#       config = request.get_json()
-#       db.configs.save(config)
-#       return "True"
+@app.route('/removeConfigs', methods = ['POST'])
+@cross_origin()
+def removeConfigs():
+       configs = request.get_json()
+       for config in configs:
+		db.configs.remove({'configName':config})
+       return jsonify({'data':'Done'})
 
 @app.route('/getConfig', methods = ['POST'])
 @cross_origin()
@@ -114,10 +114,14 @@ def getConfig():
                 json_docs.append(doc)
         return jsonify({'data': json_docs})
 
-@app.route('/reRunJob', methods = ['POST'])
+@app.route('/getRegex')
 @cross_origin()
-def saveResults():
-        return "True"
+def getRegex():
+	cursor = db.regex.find({}, {'_id':0})
+	json_docs = []
+	for doc in cursor:
+		json_docs.append(doc)
+        return jsonify({'data':json_docs})
 
 
 # Added code for Linkage
@@ -134,7 +138,7 @@ def ngram(sentence,n):
             opResult.append(grams)
     return opResult
 
-def getMostFrequentWord(resultList):
+def getMostFrequentWordOld(resultList):
     most_frequent_words = ""
     opResultFinal = []
     for result in resultList:
@@ -155,7 +159,38 @@ def getMostFrequentWord(resultList):
     for word in most_frequent_words_list:
         most_frequent_words = most_frequent_words + " " + word[0]
 
+    #l1 = most_frequent_words.strip().split(" ")
+    #most_frequent_words = " ".join(sorted(set(l1), key=l1.index))
+    most_frequent_words = " ".join(set(most_frequent_words.strip().split(" ")))
     return most_frequent_words.strip().title()
+
+
+def getMostFrequentWord(resultList):
+    listLength = len(resultList)
+    most_frequent_words = ""
+    opResultFinal = []
+    for result in resultList:
+        ngram2 = ngram(result,2)
+        ngram3 = ngram(result,3)
+        ngram4 = ngram(result,4)
+        ngram5 = ngram(result,5)
+        opResultFinal.extend(ngram2)
+        opResultFinal.extend(ngram3)
+        opResultFinal.extend(ngram4)
+        opResultFinal.extend(ngram5)
+
+    opWordCount = {}
+    for element in opResultFinal:
+        if element not in opWordCount:
+            opWordCount[element] = 1
+        else:
+            opWordCount[element] = opWordCount[element] + 1
+
+    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
+    for word_and_count in most_frequent_words_list:
+        if word_and_count[1]*1.0/listLength>.8:
+            return word_and_count[0].strip().title()
+    return most_frequent_words_list[0][0].strip().title()
 
 
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
@@ -168,7 +203,10 @@ def getClusterInfo():
 
     # Added search functionality in cluster
     if 'search' in payload:
-        pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+	if payload['search'].strip() != '':
+            pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+        else:
+            pipeline = []
     else:
         pipeline = []
 
@@ -209,7 +247,8 @@ def getClustersList():
     opList = []
     for doc in db.Linkage.find({"source":source,"version":version,"clusterId":clusterId}):
         opList.append(doc['name'])
-    return jsonify(**{'data':opList})
+    opSet = list(set(opList))
+    return jsonify(**{'data':opSet})
 
 @app.route('/cluster/clear')
 @cross_origin()
