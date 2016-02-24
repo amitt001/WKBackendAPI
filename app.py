@@ -24,14 +24,10 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route('/')
 def index():
-    return (
-        '''
-            Welcome !!! WK API
-        '''
-    )
+    return ('''Welcome !!! WK API''')
 
 def Mapping(col):
-        return ast.literal_eval(col)
+    return ast.literal_eval(col)
 
 @app.route('/getTablesInfo')
 @cross_origin()
@@ -39,80 +35,85 @@ def getTablesInfo():
     cursor = db.tables.find({},{'_id':0})
     json_docs = []
     for doc in cursor:
-                doc['columns'] = map( Mapping, doc['columns'])
-                json_docs.append(doc)
+        doc['columns'] = map( Mapping, doc['columns'])
+        json_docs.append(doc)
     return jsonify({'data': json_docs})
 
 @app.route('/postJob', methods = ['POST'])
 @cross_origin()
 def runSparkJob():
-        payload = request.get_json()
-        jobResponse = cStringIO.StringIO()
-        curlreq = pycurl.Curl()
-        url = 'http://172.16.248.156:8090/jobs?appName=check&classPath=DataChecks.basicStats'
-        curlreq.setopt(pycurl.URL, url)
-        curlreq.setopt(pycurl.HTTPHEADER, ['Accept: application/json'])
-        curlreq.setopt(pycurl.POST, 1)
-        curlreq.setopt(curlreq.WRITEFUNCTION, jobResponse.write)
-        curlreq.setopt(pycurl.POSTFIELDS, json.dumps(payload))
-        curlreq.perform()
-        js = json.loads(json.dumps(payload))
-        curlreq.close()
-        js['response'] = json.loads(jobResponse.getvalue())
-        js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
-        db.configs.save(js)
-        return jobResponse.getvalue()
+    payload = request.get_json()
+    jobResponse = cStringIO.StringIO()
+    curlreq = pycurl.Curl()
+    url = 'http://172.16.248.156:8090/jobs?appName=check&classPath=DataChecks.basicStats'
+    curlreq.setopt(pycurl.URL, url)
+    curlreq.setopt(pycurl.HTTPHEADER, ['Accept: application/json'])
+    curlreq.setopt(pycurl.POST, 1)
+    curlreq.setopt(curlreq.WRITEFUNCTION, jobResponse.write)
+    curlreq.setopt(pycurl.POSTFIELDS, json.dumps(payload))
+    curlreq.perform()
+    js = json.loads(json.dumps(payload))
+    curlreq.close()
+    js['response'] = json.loads(jobResponse.getvalue())
+    js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
+    db.configs.save(js)
+    return jobResponse.getvalue()
 
 @app.route('/getResults', methods = ['POST'])
 @cross_origin()
 def getResults():
-        jobResponse = cStringIO.StringIO()
-        jobIds = request.get_json()
-        for jobId in jobIds:
-                url = 'http://172.16.248.156:8090/jobs/' + jobId
-                r = requests.get(url)
-                response = json.loads(r.text)
-                result = response['result']
-        newresult = {}
-                if response['status'] == "FINISHED":
-            result = json.loads(result) 
-                    for k in result.iterkeys():
-                            newresult[k] = json.loads(result[k])
-                            for j in newresult[k].iterkeys():
-                                newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
-                newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
-                    response['result'] = newresult
-                if response['status'] == "FINISHED" or response['status'] == "ERROR":
-                        db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
-        results = listConfigs()
-        return results
+    jobResponse = cStringIO.StringIO()
+    jobIds = request.get_json()
+    for jobId in jobIds:
+        url = 'http://172.16.248.156:8090/jobs/' + jobId
+        r = requests.get(url)
+        response = json.loads(r.text)
+        result = response['result']
+
+    newresult = {}
+    if response['status'] == "FINISHED":
+        result = json.loads(result)
+
+    for k in result.iterkeys():
+        newresult[k] = json.loads(result[k])
+        for j in newresult[k].iterkeys():
+            newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+            newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
+    
+    response['result'] = newresult
+
+    if response['status'] == "FINISHED" or response['status'] == "ERROR":
+        db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
+    
+    results = listConfigs()
+    return results
 
 @app.route('/listConfigs')
 @cross_origin()
 def listConfigs():
-        cursor = db.configs.find({},{'_id':0})
-        json_docs = []
-        for doc in cursor:
-                json_docs.append(doc)
-        return jsonify({'data': json_docs})
+    cursor = db.configs.find({},{'_id':0})
+    json_docs = []
+    for doc in cursor:
+        json_docs.append(doc)
+    return jsonify({'data': json_docs})
 
 @app.route('/removeConfigs', methods = ['POST'])
 @cross_origin()
 def removeConfigs():
-       configs = request.get_json()
-       for config in configs:
+    configs = request.get_json()
+    for config in configs:
         db.configs.remove({'configName':config})
-       return jsonify({'data':'Done'})
+    return jsonify({'data':'Done'})
 
 @app.route('/getConfig', methods = ['POST'])
 @cross_origin()
 def getConfig():
-        configName = request.get_json()
-        cursor = db.configs.find({'configName': configName}, {'_id':0})
-        json_docs = []
-        for doc in cursor:
-                json_docs.append(doc)
-        return jsonify({'data': json_docs})
+    configName = request.get_json()
+    cursor = db.configs.find({'configName': configName}, {'_id':0})
+    json_docs = []
+    for doc in cursor:
+        json_docs.append(doc)
+    return jsonify({'data': json_docs})
 
 @app.route('/getRegex')
 @cross_origin()
@@ -178,9 +179,9 @@ def getClusterInfo():
     # Added search functionality in cluster
     if 'search' in payload:
         if payload['search'].strip() != '':
-                pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
-            else:
-                pipeline = []
+            pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+        else:
+            pipeline = []
     else:
         pipeline = []
 
