@@ -73,14 +73,14 @@ def getResults():
                 r = requests.get(url)
                 response = json.loads(r.text)
                 result = response['result']
-		newresult = {}
+        newresult = {}
                 if response['status'] == "FINISHED":
-		    result = json.loads(result)	
+            result = json.loads(result) 
                     for k in result.iterkeys():
                             newresult[k] = json.loads(result[k])
                             for j in newresult[k].iterkeys():
-                            	newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
-				newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
+                                newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+                newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
                     response['result'] = newresult
                 if response['status'] == "FINISHED" or response['status'] == "ERROR":
                         db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
@@ -101,7 +101,7 @@ def listConfigs():
 def removeConfigs():
        configs = request.get_json()
        for config in configs:
-		db.configs.remove({'configName':config})
+        db.configs.remove({'configName':config})
        return jsonify({'data':'Done'})
 
 @app.route('/getConfig', methods = ['POST'])
@@ -117,10 +117,10 @@ def getConfig():
 @app.route('/getRegex')
 @cross_origin()
 def getRegex():
-	cursor = db.regex.find({}, {'_id':0})
-	json_docs = []
-	for doc in cursor:
-		json_docs.append(doc)
+    cursor = db.regex.find({}, {'_id':0})
+    json_docs = []
+    for doc in cursor:
+        json_docs.append(doc)
         return jsonify({'data':json_docs})
 
 
@@ -138,42 +138,16 @@ def ngram(sentence,n):
             opResult.append(grams)
     return opResult
 
-def getMostFrequentWordOld(resultList):
-    most_frequent_words = ""
-    opResultFinal = []
-    for result in resultList:
-        ngram1 = ngram(result,1)
-        ngram2 = ngram(result,2)
-        opResultFinal.extend(ngram1)
-        opResultFinal.extend(ngram2)
-
-    opWordCount = {}
-    for element in opResultFinal:
-        if element not in opWordCount:
-            opWordCount[element] = 1
-        else:
-            opWordCount[element] = opWordCount[element] + 1
-
-    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (x[1], len(x[0])), reverse = True)[0:3]
-    most_frequent_words = ""
-    for word in most_frequent_words_list:
-        most_frequent_words = most_frequent_words + " " + word[0]
-
-    #l1 = most_frequent_words.strip().split(" ")
-    #most_frequent_words = " ".join(sorted(set(l1), key=l1.index))
-    most_frequent_words = " ".join(set(most_frequent_words.strip().split(" ")))
-    return most_frequent_words.strip().title()
-
-
 def getMostFrequentWord(resultList):
     listLength = len(resultList)
     most_frequent_words = ""
     opResultFinal = []
-    for result in resultList:
-        ngram2 = ngram(result,2)
-        ngram3 = ngram(result,3)
-        ngram4 = ngram(result,4)
-        ngram5 = ngram(result,5)
+    for resultWord in resultList:
+        result = resultWord.split(" - ")[0]
+        ngram2 = ngram(result,2).reverse()
+        ngram3 = ngram(result,3).reverse()
+        ngram4 = ngram(result,4).reverse()
+        ngram5 = ngram(result,5).reverse()
         opResultFinal.extend(ngram2)
         opResultFinal.extend(ngram3)
         opResultFinal.extend(ngram4)
@@ -203,10 +177,10 @@ def getClusterInfo():
 
     # Added search functionality in cluster
     if 'search' in payload:
-	if payload['search'].strip() != '':
-            pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
-        else:
-            pipeline = []
+        if payload['search'].strip() != '':
+                pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+            else:
+                pipeline = []
     else:
         pipeline = []
 
@@ -220,7 +194,7 @@ def getClusterInfo():
         opNameList = []
         for clusterElement in db.Linkage.find({"source":source, "version":version, "clusterId":currentDocId}):
             opNameList.append(clusterElement['name'])
-	
+    
         listLength = len(opNameList)
         clusterName = getMostFrequentWord(opNameList)
         clusterSize = listLength
