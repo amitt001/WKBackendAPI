@@ -122,7 +122,7 @@ def getRegex():
     json_docs = []
     for doc in cursor:
         json_docs.append(doc)
-        return jsonify({'data':json_docs})
+    return jsonify({'data':json_docs})
 
 
 # Added code for Linkage
@@ -144,7 +144,10 @@ def getMostFrequentWord(resultList):
     most_frequent_words = ""
     opResultFinal = []
     for resultWord in resultList:
-        result = resultWord.split(" - ")[0]
+        if " - " in resultWord:
+            result = resultWord.split(" - ")[0]
+        else:
+            result = resultWord
         ngram1 = ngram(result,1)[::-1]
         ngram2 = ngram(result,2)[::-1]
         ngram3 = ngram(result,3)[::-1]
