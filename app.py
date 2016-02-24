@@ -181,15 +181,26 @@ def getClustersInfo():
     opData = {"name" : "bubble","children" : []}
 
     # Added search functionality in cluster
+    pipeline = []
     if 'search' in payload:
         if payload['search'].strip() != '':
-            pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
-        else:
-            pipeline = []
-    else:
-        pipeline = []
+            pipeline.append({ "$match": { "$text": { "$search": payload['search'] } } })
 
-    pipeline.extend([{"$match":{"source":source,"version":version}},{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}},{"$sort":{"count":-1}},{ "$limit" : 200 }])
+    pipeline.extend([
+        {"$match":{"source":source,"version":version}},
+        {"$group" : {"_id":"$clusterId", "count":{"$sum":1}}}
+    ])
+    if 'clusterRange' in payload:
+        clusterRange = payload['clusterRange']
+        if "-" in clusterRange:
+            minRange = int(clusterRange.split("-")[0])
+            maxRange = int(clusterRange.split("-")[1])
+            pipeline.append({"$match":{"$and":[{"count":{"$gte":minRange,"$lte":maxRange}}]}})
+        else:
+            minRange = int(clusterRange.split("+")[0])
+            pipeline.append({"$match":{"count":{"$gte":minRange}}})
+
+    pipeline.extend([{"$sort":{"count":-1}},{"$limit":200 }])
     
     clusterCount = db.Linkage.aggregate(pipeline)
     idCount = 0
@@ -215,7 +226,6 @@ def getClustersHistogram():
     # payload = {"source":"E1","version":"3.5 - All Data"}
     source = payload['source']
     version = payload['version']
-    opData = {"name" : "bubble","children" : []}
 
     # Added search functionality in cluster
     if 'search' in payload:
@@ -241,7 +251,7 @@ def getClustersHistogram():
                         "101-500":{"value":0,"order":5},
                         "501-1000":{"value":0,"order":6},
                         "1001-5000":{"value":0,"order":7},
-                        "5000+":{"value":0,"order":8},
+                        "5001+":{"value":0,"order":8},
                     }
     clusterFrequencyResults = db.Linkage.aggregate(pipeline)
     for clusterFrequencyResult in clusterFrequencyResults:
@@ -264,7 +274,7 @@ def getClustersHistogram():
         elif clusterSize<5001:
             resultBreakOut["1001-5000"]['value'] += clusterFrequency
         else:
-            resultBreakOut["5000+"]['value'] += clusterFrequency
+            resultBreakOut["5001+"]['value'] += clusterFrequency
     opData = {"Freq":[],"type":"Frequency"}
     for clusterSize,clusterFrequencyAndOrder in resultBreakOut.iteritems():
         opData["Freq"].append({"x":clusterSize,"y":clusterFrequencyAndOrder['value'],"order":clusterFrequencyAndOrder['order']})
