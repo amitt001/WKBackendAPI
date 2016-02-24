@@ -145,10 +145,12 @@ def getMostFrequentWord(resultList):
     opResultFinal = []
     for resultWord in resultList:
         result = resultWord.split(" - ")[0]
+        ngram1 = ngram(result,1)[::-1]
         ngram2 = ngram(result,2)[::-1]
         ngram3 = ngram(result,3)[::-1]
         ngram4 = ngram(result,4)[::-1]
         ngram5 = ngram(result,5)[::-1]
+        opResultFinal.extend(ngram1)
         opResultFinal.extend(ngram2)
         opResultFinal.extend(ngram3)
         opResultFinal.extend(ngram4)
