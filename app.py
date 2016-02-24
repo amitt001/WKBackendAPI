@@ -253,7 +253,7 @@ def getClustersHistogram():
                         "1001-5000":{"value":0,"order":7},
                         "5001+":{"value":0,"order":8},
                     }
-    numberOfUniqueEntities = 0
+    numberOfUniqueEntities = db.Linkage.count({"source":source,"version":version})
     numberOfClusters = 0
     clusterFrequencyResults = db.Linkage.aggregate(pipeline)
     for clusterFrequencyResult in clusterFrequencyResults:
@@ -261,7 +261,7 @@ def getClustersHistogram():
         clusterFrequency = clusterFrequencyResult['frequency']
         if clusterSize<2:
             resultBreakOut["1"]['value'] += clusterFrequency
-            numberOfUniqueEntities += clusterFrequency
+            numberOfClusters += clusterFrequency
         elif clusterSize<6:
             resultBreakOut["2-5"]['value'] += clusterFrequency
             numberOfClusters += clusterFrequency
