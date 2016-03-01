@@ -129,7 +129,167 @@ def getRegex():
         json_docs.append(doc)
     return jsonify({'data':json_docs})
 
+######LOGO VIEW######
+def summaryData(queryDict):
+    """
+        summary endpoints call this method
+            :Parameters:
+                queryDict: a dictionary to query from mongoDB
+    """
+    clusterData = {}
+    try:
+        db = MongoClient().testdb.testcol
+        #cst count
+        clusterData['noOfCSTs'] = db.count(queryDict)
+        #c count
+        clusterData['noOfCs'] = list(db.aggregate([
+                            {'$match': queryDict},
+                            {'$unwind': "$cData"},
+                            {'$project': {'count': {'$add':1}}},
+                            {'$group': 
+                                {'_id': 'null', 'number': 
+                                    {'$sum': "$count"}}}]))[0]['number']
+        clusterData['revenue'] = list(db.aggregate([
+                                {'$match': queryDict}, 
+                                {'$group':
+                                    {'_id':'', 'revenue': 
+                                    {'$sum':'$revenue'}}}]))[0]['revenue']
+        for itm in ['cEmail', 'cAddress', 'cPhone']:
+            clusterData['noOf'+itm.lstrip('c')] = len(
+                filter(lambda x: x, db.distinct('cData.'+itm, queryDict)))
+        #clusterData['addresses'] = len(
+        #    filter(lambda x: x, db.distinct('cData.cAddress', {'clusterId':1})))
+    except Exception as err:
+        import traceback
+        print traceback.format_exc()
+    return clusterData
 
+@app.route('/summary', methods=['POST'])
+@cross_origin()
+def getSumary():
+    """
+        returns summary of a cluster
+    """
+    payload = ast.literal_eval(request.data)
+    clusterId = payload['clusterId']
+    data = summaryData(queryDict = {'clusterId': clusterId})
+    return jsonify({str(clusterId): data})
+
+
+@app.route('/summary/map', methods=['POST'])
+@cross_origin()
+def getMapSummary():
+    """
+        returns the summary for a cluster based on states
+        for frontend map
+    """
+    payload = ast.literal_eval(request.data)
+    clusterId = payload['clusterId']
+    db = MongoClient().testdb.testcol
+    data = []
+    for state in db.distinct('aladds', {'clusterId':1}):
+        queryDict = {'clusterId': int(clusterId), 'aladds': state}
+        dt = summaryData(queryDict = queryDict)
+        dt.update({'state':state})
+        data.append(dt)
+    return jsonify({str(clusterId): data})
+
+
+@app.route('/duns', methods=['POST'])
+@cross_origin()
+def getDuns():
+    """
+        return all the duns data with global duns no as glbduns
+    """
+    payload = ast.literal_eval(request.data)
+    glbDuns = payload['glbDuns']
+    db = MongoClient().testdb.testduns
+    data = list(db.find({'globalUltDunsNum': glbDuns}, {'_id':0}))
+    return jsonify({glbDuns: data})
+
+
+@app.route('/cstduns', methods=['POST'])
+@cross_origin()
+def getCstByDuns():
+    """
+        Return all the csts with the globalUltDunsNum=glbDuns
+        i.e. global duns no
+    """
+    payload = ast.literal_eval(request.data)
+    glbDuns = payload['glbDuns']
+    db = MongoClient().testdb.testcol
+    data = list(db.find({'globalUltDunsNum': glbDuns}, {'_id':0}))
+    return jsonify({glbDuns: data})
+
+
+@app.route('/merge', methods=['POST'])
+@cross_origin()
+def merge():
+    response = {}
+
+    try:
+        payload = ast.literal_eval(request.data)
+        csts = payload.get('csts', [])
+        if isinstance(csts, str):
+            csts = list(csts)
+        db = MongoClient().testdb.testcol2
+        key = ['clusterId', 'cstNumber', 'e1ClusterId']
+        cond = {'cstNumber':{'$in': csts}}
+        redc = 'function(curr, result) {}'
+        initial = {}
+        data = list(db.group(key, cond, initial, redc))
+        l = map(lambda x: (x['clusterId'],x['e1ClusterId']), data)
+        max_cluster = max(l, key=l[0].count)
+        print data, max_cluster
+        for each in filter(lambda x: x['clusterId']!=max_cluster[0], data):
+            print each, max_cluster, type(each['cstNumber'])
+            db.update(
+                {'cstNumber': each['cstNumber']},
+                {'$set': 
+                    {'clusterId': max_cluster[0], 'e1ClusterId': max_cluster[1]}})
+        response = {'response': 'ok'}
+    except Exception as err:
+        print (err)
+        response = {'response': 'error'}
+    return jsonify(response)
+
+
+@app.route('/split', methods=['POST'])
+@cross_origin()
+def split():
+    """
+        Split
+            :Parameters:
+                multi: if multi is true
+                            split in multiple clusters i.e set multiple clusterId
+                       else
+                        split with same clusterID
+
+    """
+    response = {}
+    try:
+        payload = ast.literal_eval(request.data)
+        csts = payload.get('csts', [])
+        multi = payload.get('multi', True)
+        if isinstance(csts, str):
+            csts = list(csts)
+        db = MongoClient().testdb.testcol2
+        if multi:
+            for cs in csts:
+                clusterId = 'SPL' + cs
+                db.update(
+                    {'cstNumber': cs}, 
+                    {'$set': {'clusterId': clusterId}}, multi=True)
+        else:
+            clusterId = 'SPL' + '%.0f' % time.time()
+            db.update(
+                {'cstNumber': {'$in':csts}}, 
+                {'$set': {'clusterId': clusterId}}, multi=True)
+        response = {'response': 'ok'}
+    except Exception as err:
+        print (err)
+        response = {'response': 'error'}
+    return jsonify(response)
 # Added code for Linkage
 
 def ngram(sentence,n):
