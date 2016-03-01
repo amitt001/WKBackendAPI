@@ -56,7 +56,11 @@ def runSparkJob():
     curlreq.close()
     js['response'] = json.loads(jobResponse.getvalue())
     js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
-    db.configs.save(js)
+    cursor = db.configs.find({'configName': js['configName']})
+    if cursor.count() == 0:
+        db.configs.save(js)
+    else:
+        db.configs.update({'configName': js['configName']}, {'$set':{'response': js['response'], 'jobId': js['jobId'], 'tables': js['tables'], 'columns': js['columns']}})
     return jobResponse.getvalue()
 
 @app.route('/getResults', methods = ['POST'])
@@ -64,34 +68,35 @@ def runSparkJob():
 def getResults():
     jobResponse = cStringIO.StringIO()
     jobIds = request.get_json()
+    print jobIds
     for jobId in jobIds:
         url = 'http://172.16.248.156:8090/jobs/' + jobId
         r = requests.get(url)
         response = json.loads(r.text)
-        result = response['result']
-
-    newresult = {}
-    if response['status'] == "FINISHED":
-        result = json.loads(result)
-
-    for k in result.iterkeys():
-        newresult[k] = json.loads(result[k])
-        for j in newresult[k].iterkeys():
-            newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
-            newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
-    
-    response['result'] = newresult
-
+        #result = response['result']
+        newresult = {}
+        print response
+        if response['status'] == "FINISHED":
+            result = response['result']
+            result = json.loads(result)
+            for k in result.iterkeys():
+                newresult[k] = json.loads(result[k])
+                for j in newresult[k].iterkeys():
+                    newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+                    newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
+            response['result'] = newresult
+    print response
     if response['status'] == "FINISHED" or response['status'] == "ERROR":
-        db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
+        db.configs.update({'jobId':jobId}, {'$set': {'response': response, 'currStatus': response['status']}})
     
     results = listConfigs()
+    print results
     return results
 
 @app.route('/listConfigs')
 @cross_origin()
 def listConfigs():
-    cursor = db.configs.find({},{'_id':0})
+    cursor = db.configs.find({},{'_id':0, 'response.result':0})
     json_docs = []
     for doc in cursor:
         json_docs.append(doc)
@@ -139,7 +144,121 @@ def ngram(sentence,n):
             opResult.append(grams)
     return opResult
 
+
 def getMostFrequentWord(resultList):
+    duns_number_list = []
+    duns_number_dict = {}
+    for result in resultList:
+        if " :: " not in result:
+            break
+        duns_number = result.split(" :: ")[1]
+        duns_name = duns_number.split(" : ")[0].strip()
+        if duns_name=="":
+            continue
+
+        if duns_name not in duns_number_dict:
+            duns_number_dict[duns_name] = 0
+        duns_number_dict[duns_name] += 1
+        duns_number_list.append(duns_name)
+
+    duns_name_number = list(set(duns_number_list))
+
+    # if it breaks it will not have any element in it
+    if len(duns_name_number)==1:
+        dunsTempName = duns_name_number[0].title()
+        if dunsTempName!="":
+            return dunsTempName
+
+    # rule for greater than 70% check over here
+    totalLengthValues = sum(duns_number_dict.values())
+    if totalLengthValues > 0:
+        maxKey = max(duns_number_dict, key=duns_number_dict.get)
+        maxValue = duns_number_dict[maxKey]
+
+        if maxValue*1.0/totalLengthValues>0.7:
+            return maxKey.title()
+
+    # Normal flow of it
+    listLength = len(resultList)
+    most_frequent_words = ""
+    opResultFinal = []
+    for resultWord in resultList:
+        if " - " in resultWord:
+            result = resultWord.split(" - ")[0]
+        else:
+            result = resultWord
+        ngram1 = ngram(result,1) #[::-1]
+        ngram2 = ngram(result,2) #[::-1]
+        ngram3 = ngram(result,3) #[::-1]
+        ngram4 = ngram(result,4) #[::-1]
+        ngram5 = ngram(result,5) #[::-1]
+        opResultFinal.extend(ngram1)
+        opResultFinal.extend(ngram2)
+        opResultFinal.extend(ngram3)
+        opResultFinal.extend(ngram4)
+        opResultFinal.extend(ngram5)
+
+    opWordCount = {}
+    for element in opResultFinal:
+        if element not in opWordCount:
+            opWordCount[element] = 1
+        else:
+            opWordCount[element] = opWordCount[element] + 1
+
+    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
+    for word_and_count in most_frequent_words_list:
+        if word_and_count[1]*1.0/listLength>.8:
+            return word_and_count[0].strip().title()
+    return most_frequent_words_list[0][0].strip().title()
+
+
+
+def getMostFrequentWordOld2(resultList):
+    duns_number_list = []
+    for result in resultList:
+        if " :: " not in result:
+            break
+        duns_number = result.split(" :: ")[1]
+        duns_number_list.append(duns_number)
+    duns_name_number = list(set(duns_number_list))
+
+    if len(duns_name_number)==1:
+        return duns_name_number[0].split(":")[0].strip().title()
+
+    listLength = len(resultList)
+    most_frequent_words = ""
+    opResultFinal = []
+    for resultWord in resultList:
+        if " - " in resultWord:
+            result = resultWord.split(" - ")[0]
+        else:
+            result = resultWord
+        ngram1 = ngram(result,1) #[::-1]
+        ngram2 = ngram(result,2) #[::-1]
+        ngram3 = ngram(result,3) #[::-1]
+        ngram4 = ngram(result,4) #[::-1]
+        ngram5 = ngram(result,5) #[::-1]
+        opResultFinal.extend(ngram1)
+        opResultFinal.extend(ngram2)
+        opResultFinal.extend(ngram3)
+        opResultFinal.extend(ngram4)
+        opResultFinal.extend(ngram5)
+
+    opWordCount = {}
+    for element in opResultFinal:
+        if element not in opWordCount:
+            opWordCount[element] = 1
+        else:
+            opWordCount[element] = opWordCount[element] + 1
+
+    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
+    for word_and_count in most_frequent_words_list:
+        if word_and_count[1]*1.0/listLength>.8:
+            return word_and_count[0].strip().title()
+    return most_frequent_words_list[0][0].strip().title()
+
+
+def getMostFrequentWordOld(resultList):
     listLength = len(resultList)
     most_frequent_words = ""
     opResultFinal = []
