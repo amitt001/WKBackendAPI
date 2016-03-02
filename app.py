@@ -1,7 +1,6 @@
 from flask import Flask, flash, redirect, url_for, request, get_flashed_messages, jsonify
 from pymongo import MongoClient
 import json
-import time
 from bson import json_util
 import pycurl, json
 from flask.ext.cors import CORS, cross_origin
@@ -9,6 +8,7 @@ import cStringIO
 import ast
 import requests
 import re
+import time
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -57,11 +57,7 @@ def runSparkJob():
     curlreq.close()
     js['response'] = json.loads(jobResponse.getvalue())
     js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
-    cursor = db.configs.find({'configName': js['configName']})
-    if cursor.count() == 0:
-        db.configs.save(js)
-    else:
-        db.configs.update({'configName': js['configName']}, {'$set':{'response': js['response'], 'jobId': js['jobId'], 'tables': js['tables'], 'columns': js['columns']}})
+    db.configs.save(js)
     return jobResponse.getvalue()
 
 @app.route('/getResults', methods = ['POST'])
@@ -69,35 +65,34 @@ def runSparkJob():
 def getResults():
     jobResponse = cStringIO.StringIO()
     jobIds = request.get_json()
-    print jobIds
     for jobId in jobIds:
         url = 'http://172.16.248.156:8090/jobs/' + jobId
         r = requests.get(url)
         response = json.loads(r.text)
-        #result = response['result']
-        newresult = {}
-        print response
-        if response['status'] == "FINISHED":
-            result = response['result']
-            result = json.loads(result)
-            for k in result.iterkeys():
-                newresult[k] = json.loads(result[k])
-                for j in newresult[k].iterkeys():
-                    newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
-                    newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
-            response['result'] = newresult
-    print response
+        result = response['result']
+
+    newresult = {}
+    if response['status'] == "FINISHED":
+        result = json.loads(result)
+
+    for k in result.iterkeys():
+        newresult[k] = json.loads(result[k])
+        for j in newresult[k].iterkeys():
+            newresult[k][j]['topNValues'] = json.dumps(newresult[k][j]['topNValues'])
+            newresult[k][j]['sorting'] = 1 - (float(newresult[k][j]['regexStats']['blankRowsPercentage'])/100 + float(newresult[k][j]['regexStats']['invalidRowsPercentage'])/100)
+    
+    response['result'] = newresult
+
     if response['status'] == "FINISHED" or response['status'] == "ERROR":
-        db.configs.update({'jobId':jobId}, {'$set': {'response': response, 'currStatus': response['status']}})
+        db.configs.update({'jobId':jobId}, {'$set': {'response': response}})
     
     results = listConfigs()
-    print results
     return results
 
 @app.route('/listConfigs')
 @cross_origin()
 def listConfigs():
-    cursor = db.configs.find({},{'_id':0, 'response.result':0})
+    cursor = db.configs.find({},{'_id':0})
     json_docs = []
     for doc in cursor:
         json_docs.append(doc)
@@ -130,7 +125,55 @@ def getRegex():
         json_docs.append(doc)
     return jsonify({'data':json_docs})
 
-######LOGO VIEW######
+
+# Added code for Linkage
+
+def ngram(sentence,n):
+    sentence = sentence.lower()
+    sentence = re.sub('[^0-9a-zA-Z]+', ' ', sentence)
+    sentence = re.sub('[ ]+', ' ', sentence)
+    opResult = []
+    splittedSentence = sentence.split(" ")
+    for x in xrange(len(splittedSentence)):
+        if x+n<=len(splittedSentence):
+            grams = " ".join(splittedSentence[x:x+n])
+            opResult.append(grams)
+    return opResult
+
+def getMostFrequentWord(resultList):
+    listLength = len(resultList)
+    most_frequent_words = ""
+    opResultFinal = []
+    for resultWord in resultList:
+        if " - " in resultWord:
+            result = resultWord.split(" - ")[0]
+        else:
+            result = resultWord
+        ngram1 = ngram(result,1) #[::-1]
+        ngram2 = ngram(result,2) #[::-1]
+        ngram3 = ngram(result,3) #[::-1]
+        ngram4 = ngram(result,4) #[::-1]
+        ngram5 = ngram(result,5) #[::-1]
+        opResultFinal.extend(ngram1)
+        opResultFinal.extend(ngram2)
+        opResultFinal.extend(ngram3)
+        opResultFinal.extend(ngram4)
+        opResultFinal.extend(ngram5)
+
+    opWordCount = {}
+    for element in opResultFinal:
+        if element not in opWordCount:
+            opWordCount[element] = 1
+        else:
+            opWordCount[element] = opWordCount[element] + 1
+
+    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
+    for word_and_count in most_frequent_words_list:
+        if word_and_count[1]*1.0/listLength>.8:
+            return word_and_count[0].strip().title()
+    return most_frequent_words_list[0][0].strip().title()
+
+
 def summaryData(queryDict):
     """
         summary endpoints call this method
@@ -138,6 +181,7 @@ def summaryData(queryDict):
                 queryDict: a dictionary to query from mongoDB
     """
     clusterData = {}
+    print queryDict
     try:
         db = MongoClient().testdb.testcol
         #cst count
@@ -145,7 +189,7 @@ def summaryData(queryDict):
         #c count
         clusterData['noOfCs'] = list(db.aggregate([
                             {'$match': queryDict},
-                            {'$unwind': "$cData"},
+                            {'$unwind': "$c"},
                             {'$project': {'count': {'$add':1}}},
                             {'$group': 
                                 {'_id': 'null', 'number': 
@@ -157,43 +201,82 @@ def summaryData(queryDict):
                                     {'$sum':'$revenue'}}}]))[0]['revenue']
         for itm in ['cEmail', 'cAddress', 'cPhone']:
             clusterData['noOf'+itm.lstrip('c')] = len(
-                filter(lambda x: x, db.distinct('cData.'+itm, queryDict)))
+                filter(lambda x: x, db.distinct('c.'+itm, queryDict)))
         #clusterData['addresses'] = len(
-        #    filter(lambda x: x, db.distinct('cData.cAddress', {'clusterId':1})))
+        #    filter(lambda x: x, db.distinct('c.cAddress', {'clusterId':1})))
     except Exception as err:
         import traceback
         print traceback.format_exc()
     return clusterData
 
-@app.route('/summary', methods=['POST'])
+@app.route('/duns/summary', methods=['POST'])
 @cross_origin()
 def getSumary():
     """
         returns summary of a cluster
     """
-    payload = ast.literal_eval(request.data)
-    clusterId = payload['clusterId']
-    data = summaryData(queryDict = {'clusterId': clusterId})
-    return jsonify({str(clusterId): data})
+
+    response_data = {}
+    queryDict = {}
+
+    payload = json.loads(ast.literal_eval(request.data)['data'])
+
+    globalUltDunsNum = payload['dunsNum']
+
+    queryDict.update({'globalUltDunsNum': globalUltDunsNum})
+
+    if payload.get('source', ''):
+        queryDict.update({'source': payload.get('source', '')})
+
+    if payload.get('version', ''):
+        queryDict.update({'version': payload.get('version', '')})
+
+    #FOR SUMMARY
+    data = summaryData(queryDict = queryDict)
+    response_data['summary'] = data
+
+    db = MongoClient().testdb.testcol
+    #FOR PI CHART
+    pipeline = [
+        {'$match': {'globalUltDunsNum': globalUltDunsNum}},
+        {'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
+    print list(db.aggregate(pipeline))
+
+    #FOR MAP SUMMARY
+    data = []
+    for state in db.distinct('stateProvAbb', {'globalUltDunsNum': globalUltDunsNum}):
+        queryDict.update({'stateProvAbb': state})
+        dt = summaryData(queryDict = queryDict)
+        dt.update({'state':state})
+        data.append(dt)
+    response_data['map'] = data
+
+    return jsonify({'data': response_data})
 
 
 @app.route('/summary/map', methods=['POST'])
 @cross_origin()
 def getMapSummary():
     """
-        returns the summary for a cluster based on states
+        returns the summary for a cluster based on country state
         for frontend map
     """
+    queryDict = {}
     payload = ast.literal_eval(request.data)
-    clusterId = payload['clusterId']
+    globalUltDunsNum = payload['dunsNum']
+    queryDict.update({'globalUltDunsNum': globalUltDunsNum})
+    if payload.get('source', ''):
+        queryDict.update({'source': payload.get('source', '')})
+    if payload.get('version', ''):
+        queryDict.update({'version': payload.get('version', '')})
     db = MongoClient().testdb.testcol
     data = []
-    for state in db.distinct('aladds', {'clusterId':1}):
-        queryDict = {'clusterId': int(clusterId), 'aladds': state}
+    for state in db.distinct('stateProvAbb', {'globalUltDunsNum': globalUltDunsNum}):
+        queryDict.update({'stateProvAbb': state})
         dt = summaryData(queryDict = queryDict)
         dt.update({'state':state})
         data.append(dt)
-    return jsonify({str(clusterId): data})
+    return jsonify({str(globalUltDunsNum): data})
 
 
 @app.route('/duns', methods=['POST'])
@@ -230,28 +313,41 @@ def merge():
 
     try:
         payload = ast.literal_eval(request.data)
-        csts = payload.get('csts', [])
+        csts = payload.get('data', [])
+        print csts
         if isinstance(csts, str):
             csts = list(csts)
+
         db = MongoClient().testdb.testcol2
-        key = ['clusterId', 'cstNumber', 'e1ClusterId']
-        cond = {'cstNumber':{'$in': csts}}
+        key = ['clusterId', 'cstNum', 'e1ClusterId']
+        cond = {'cstNum':{'$in': csts}}
         redc = 'function(curr, result) {}'
         initial = {}
         data = list(db.group(key, cond, initial, redc))
-        l = map(lambda x: (x['clusterId'],x['e1ClusterId']), data)
-        max_cluster = max(l, key=l[0].count)
-        print data, max_cluster
-        for each in filter(lambda x: x['clusterId']!=max_cluster[0], data):
-            print each, max_cluster, type(each['cstNumber'])
+
+        cid_e1cid = filter(lambda x: x[0], map(
+            lambda x: (x['clusterId'],x['e1ClusterId']), data))
+        #if csts belongs to no cluster i.e. clusterId = ''
+        #then set clusterId as some unique value
+        if not cid_e1cid:
+            clusterId = 'SPL' + '%.0f' % time.time()
+            cid_e1cid = [(clusterId, '')]
+
+        max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
+        #filter(lambda x: x['clusterId']!=max_cluster[0], 
+        for e1cid, each in enumerate(data):
+            print each, max_cluster, type(each['cstNum'])
             db.update(
-                {'cstNumber': each['cstNumber']},
+                {'cstNum': each['cstNum']},
                 {'$set': 
-                    {'clusterId': max_cluster[0], 'e1ClusterId': max_cluster[1]}})
+                    {'clusterId': max_cluster[0], 'e1ClusterId': e1cid}})
         response = {'response': 'ok'}
+
     except Exception as err:
-        print (err)
+        import traceback
+        print (traceback.format_exc())
         response = {'response': 'error'}
+
     return jsonify(response)
 
 
@@ -259,198 +355,46 @@ def merge():
 @cross_origin()
 def split():
     """
-        Split
-            :Parameters:
-                multi: if multi is true
-                            split in multiple clusters i.e set multiple clusterId
-                       else
-                        split with same clusterID
-
+    Split
+    :Parameters:
+    multi: if multi is true
+            split in multiple clusters i.e set multiple clusterId
+           else
+            split with same clusterID
     """
     response = {}
     try:
         payload = ast.literal_eval(request.data)
         csts = payload.get('csts', [])
         multi = payload.get('multi', True)
+
         if isinstance(csts, str):
             csts = list(csts)
+
         db = MongoClient().testdb.testcol2
+        
         if multi:
-            for cs in csts:
+            for e1cid, cs in enumerate(csts):
                 clusterId = 'SPL' + cs
                 db.update(
-                    {'cstNumber': cs}, 
-                    {'$set': {'clusterId': clusterId}}, multi=True)
+                    {'cstNum': cs}, {'$set': 
+                    {'clusterId': clusterId, 'e1ClusterId': '0'}})
         else:
             clusterId = 'SPL' + '%.0f' % time.time()
-            db.update(
-                {'cstNumber': {'$in':csts}}, 
-                {'$set': {'clusterId': clusterId}}, multi=True)
+            for e1cid, cs in enumerate(csts):
+                db.update(
+                    {'cstNum': cs}, {'$set':
+                    {'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
+
         response = {'response': 'ok'}
+
     except Exception as err:
-        print (err)
+        import traceback
+        print (traceback.format_exc())
         response = {'response': 'error'}
+
     return jsonify(response)
-# Added code for Linkage
 
-def ngram(sentence,n):
-    sentence = sentence.lower()
-    sentence = re.sub('[^0-9a-zA-Z]+', ' ', sentence)
-    sentence = re.sub('[ ]+', ' ', sentence)
-    opResult = []
-    splittedSentence = sentence.split(" ")
-    for x in xrange(len(splittedSentence)):
-        if x+n<=len(splittedSentence):
-            grams = " ".join(splittedSentence[x:x+n])
-            opResult.append(grams)
-    return opResult
-
-
-def getMostFrequentWord(resultList):
-    duns_number_list = []
-    duns_number_dict = {}
-    for result in resultList:
-        if " :: " not in result:
-            break
-        duns_number = result.split(" :: ")[1]
-        duns_name = duns_number.split(" : ")[0].strip()
-        if duns_name=="":
-            continue
-
-        if duns_name not in duns_number_dict:
-            duns_number_dict[duns_name] = 0
-        duns_number_dict[duns_name] += 1
-        duns_number_list.append(duns_name)
-
-    duns_name_number = list(set(duns_number_list))
-
-    # if it breaks it will not have any element in it
-    if len(duns_name_number)==1:
-        dunsTempName = duns_name_number[0].title()
-        if dunsTempName!="":
-            return dunsTempName
-
-    # rule for greater than 70% check over here
-    totalLengthValues = sum(duns_number_dict.values())
-    if totalLengthValues > 0:
-        maxKey = max(duns_number_dict, key=duns_number_dict.get)
-        maxValue = duns_number_dict[maxKey]
-
-        if maxValue*1.0/totalLengthValues>0.7:
-            return maxKey.title()
-
-    # Normal flow of it
-    listLength = len(resultList)
-    most_frequent_words = ""
-    opResultFinal = []
-    for resultWord in resultList:
-        if " - " in resultWord:
-            result = resultWord.split(" - ")[0]
-        else:
-            result = resultWord
-        ngram1 = ngram(result,1) #[::-1]
-        ngram2 = ngram(result,2) #[::-1]
-        ngram3 = ngram(result,3) #[::-1]
-        ngram4 = ngram(result,4) #[::-1]
-        ngram5 = ngram(result,5) #[::-1]
-        opResultFinal.extend(ngram1)
-        opResultFinal.extend(ngram2)
-        opResultFinal.extend(ngram3)
-        opResultFinal.extend(ngram4)
-        opResultFinal.extend(ngram5)
-
-    opWordCount = {}
-    for element in opResultFinal:
-        if element not in opWordCount:
-            opWordCount[element] = 1
-        else:
-            opWordCount[element] = opWordCount[element] + 1
-
-    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-    for word_and_count in most_frequent_words_list:
-        if word_and_count[1]*1.0/listLength>.8:
-            return word_and_count[0].strip().title()
-    return most_frequent_words_list[0][0].strip().title()
-
-
-
-def getMostFrequentWordOld2(resultList):
-    duns_number_list = []
-    for result in resultList:
-        if " :: " not in result:
-            break
-        duns_number = result.split(" :: ")[1]
-        duns_number_list.append(duns_number)
-    duns_name_number = list(set(duns_number_list))
-
-    if len(duns_name_number)==1:
-        return duns_name_number[0].split(":")[0].strip().title()
-
-    listLength = len(resultList)
-    most_frequent_words = ""
-    opResultFinal = []
-    for resultWord in resultList:
-        if " - " in resultWord:
-            result = resultWord.split(" - ")[0]
-        else:
-            result = resultWord
-        ngram1 = ngram(result,1) #[::-1]
-        ngram2 = ngram(result,2) #[::-1]
-        ngram3 = ngram(result,3) #[::-1]
-        ngram4 = ngram(result,4) #[::-1]
-        ngram5 = ngram(result,5) #[::-1]
-        opResultFinal.extend(ngram1)
-        opResultFinal.extend(ngram2)
-        opResultFinal.extend(ngram3)
-        opResultFinal.extend(ngram4)
-        opResultFinal.extend(ngram5)
-
-    opWordCount = {}
-    for element in opResultFinal:
-        if element not in opWordCount:
-            opWordCount[element] = 1
-        else:
-            opWordCount[element] = opWordCount[element] + 1
-
-    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-    for word_and_count in most_frequent_words_list:
-        if word_and_count[1]*1.0/listLength>.8:
-            return word_and_count[0].strip().title()
-    return most_frequent_words_list[0][0].strip().title()
-
-
-def getMostFrequentWordOld(resultList):
-    listLength = len(resultList)
-    most_frequent_words = ""
-    opResultFinal = []
-    for resultWord in resultList:
-        if " - " in resultWord:
-            result = resultWord.split(" - ")[0]
-        else:
-            result = resultWord
-        ngram1 = ngram(result,1) #[::-1]
-        ngram2 = ngram(result,2) #[::-1]
-        ngram3 = ngram(result,3) #[::-1]
-        ngram4 = ngram(result,4) #[::-1]
-        ngram5 = ngram(result,5) #[::-1]
-        opResultFinal.extend(ngram1)
-        opResultFinal.extend(ngram2)
-        opResultFinal.extend(ngram3)
-        opResultFinal.extend(ngram4)
-        opResultFinal.extend(ngram5)
-
-    opWordCount = {}
-    for element in opResultFinal:
-        if element not in opWordCount:
-            opWordCount[element] = 1
-        else:
-            opWordCount[element] = opWordCount[element] + 1
-
-    most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-    for word_and_count in most_frequent_words_list:
-        if word_and_count[1]*1.0/listLength>.8:
-            return word_and_count[0].strip().title()
-    return most_frequent_words_list[0][0].strip().title()
 
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
 @cross_origin()
