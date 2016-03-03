@@ -533,6 +533,7 @@ def getClustersList():
 	clusterId = payload['clusterId']
 	opList = []
 	for doc in db.LinkageOp1.find({"source":source,"version":version,"clusterId":clusterId}):
+		singleCstData = {"cstName":doc['cstName'],"cstNum":doc['cstNum']}
 		opList.append(doc['cstName'])
 	opSet = list(set(opList))
 	return jsonify(**{'data':opSet})
