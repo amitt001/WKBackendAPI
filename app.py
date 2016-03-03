@@ -634,24 +634,24 @@ def getSumary():
 @app.route('/logo/allcst', methods=['POST'])
 @cross_origin()
 def get_cst_by_cluster():
-    queryDict = {}
-    # payload = json.loads(ast.literal_eval(request.data)['data'])
-    payload = ast.literal_eval(request.data)
-    clusterId = payload['clustId']
+	queryDict = {}
+	# payload = json.loads(ast.literal_eval(request.data)['data'])
+	payload = ast.literal_eval(request.data)
+	clusterId = payload['clustId']
 
-    queryDict.update({'clusterId': clusterId})
+	queryDict.update({'clusterId': clusterId})
 
-    if payload.get('source', ''):
-        queryDict.update({'source': payload.get('source', '').capitalize()})
+	if payload.get('source', ''):
+		queryDict.update({'source': payload.get('source', '').capitalize()})
 
-    if payload.get('version', ''):
-        queryDict.update({'version': payload.get('version', '')})
-    print(queryDict)
-    col = db.LinkageOp1
-    response_data = []
-    for cst in col.find(queryDict, {'customer': 0, '_id':0}):
-        response_data.append(cst)
-    return jsonify({'data': response_data})
+	if payload.get('version', ''):
+		queryDict.update({'version': payload.get('version', '')})
+	print(queryDict)
+	col = db.LinkageOp1
+	response_data = []
+	for cst in col.find(queryDict, {'customer': 0, '_id':0}):
+		response_data.append(cst)
+	return jsonify({'data': response_data})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
