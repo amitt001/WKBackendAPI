@@ -619,9 +619,11 @@ def getSumary():
 		{'$match': queryDict},
 		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
 	data = list(col.aggregate(pipeline))
+	new_data = []
 	for sg in data:
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
-	response_data['pie'] = data
+		new_data.append({sg['_id']: sg['count']})
+	response_data['pie'] = new_data
 
 	#FOR MAP SUMMARY
 	data = []
