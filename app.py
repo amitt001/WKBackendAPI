@@ -587,12 +587,16 @@ def getSumary():
 	"""
 		returns summary of a cluster
 	"""
-
 	response_data = {}
 	queryDict = {}
-
-	payload = json.loads(ast.literal_eval(request.data)['data'])
-
+	
+	# outfile = open("output.txt","wb")
+	# outfile.write("---")
+	# payload = json.loads(ast.literal_eval(request.data)['data'])
+	payload = ast.literal_eval(request.data)
+	# outfile.write(str(payload))
+	# outfile.write("@@@@-------")
+	# outfile.close()
 	clusterId = payload['clustId']
 
 	queryDict.update({'clusterId': clusterId})
