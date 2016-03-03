@@ -535,8 +535,7 @@ def getClustersList():
 	for doc in db.LinkageOp1.find({"source":source,"version":version,"clusterId":clusterId}):
 		singleCstData = {"cstName":doc['cstName'],"cstNum":doc['cstNum']}
 		opList.append(singleCstData)
-	opSet = list(set(opList))
-	return jsonify(**{'data':opSet})
+	return jsonify(**{'data':opList})
 
 @app.route('/cluster/clear')
 @cross_origin()
