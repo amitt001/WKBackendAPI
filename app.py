@@ -537,8 +537,11 @@ def getClustersList():
 		noOfC = 0
 		if 'customer' in doc:
 			noOfC = len(doc['customer'])
+		revenue = ""
+		if 'revenue' in doc:
+			revenue = doc['revenue']
 
-		singleCstData = {"cstName":doc['cstName'],"cstNum":doc['cstNum'],"revenue":doc['revenue'],"noOfC":noOfC}
+		singleCstData = {"cstName":doc['cstName'],"cstNum":doc['cstNum'],"revenue":revenue,"noOfC":noOfC}
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
