@@ -478,9 +478,9 @@ def getClustersHistogram():
 						"1001-5000":{"value":0,"order":7},
 						"5001+":{"value":0,"order":8},
 					}
-	numberOfUniqueEntities = db.Linkage.count({"source":source,"version":version})
+	numberOfUniqueEntities = db.LinkageOp1.count({"source":source,"version":version})
 	numberOfClusters = 0
-	clusterFrequencyResults = db.Linkage.aggregate(pipeline)
+	clusterFrequencyResults = db.LinkageOp1.aggregate(pipeline)
 	for clusterFrequencyResult in clusterFrequencyResults:
 		clusterSize = clusterFrequencyResult['_id']
 		clusterFrequency = clusterFrequencyResult['frequency']
@@ -521,8 +521,8 @@ def getClustersHistogram():
 @cross_origin()
 def getClusterTablesInfo():
 	opData = {}
-	for source in db.Linkage.distinct("source"):
-		opData[source] = db.Linkage.find({"source":source}).distinct("version")
+	for source in db.LinkageOp1.distinct("source"):
+		opData[source] = db.LinkageOp1.find({"source":source}).distinct("version")
 	return jsonify({'data':opData})
 
 @app.route('/cluster/getClustersList', methods = ['POST'])
@@ -533,8 +533,8 @@ def getClustersList():
 	version = payload['version']
 	clusterId = payload['clusterId']
 	opList = []
-	for doc in db.Linkage.find({"source":source,"version":version,"clusterId":clusterId}):
-		opList.append(doc['name'])
+	for doc in db.LinkageOp1.find({"source":source,"version":version,"clusterId":clusterId}):
+		opList.append(doc['cstName'])
 	opSet = list(set(opList))
 	return jsonify(**{'data':opSet})
 
