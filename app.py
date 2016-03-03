@@ -622,7 +622,7 @@ def getSumary():
 	new_data = []
 	for sg in data:
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
-		new_data.append({sg['_id']: sg['count']})
+		new_data.append({'name':sg['_id'], 'val' : sg['count']})
 	response_data['pie'] = new_data
 
 	#FOR MAP SUMMARY
