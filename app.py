@@ -535,7 +535,7 @@ def getClustersList():
 	for doc in db.LinkageOp1.find({"source":source,"version":version,"clusterId":clusterId}):
 		# Added 3 March 2016 - noOfC and revenue in it
 		noOfC = 0
-		if 'customer' in doc:
+		if 'customer' in doc and doc['customer'] is not None:
 			noOfC = len(doc['customer'])
 		revenue = ""
 		if 'revenue' in doc:
