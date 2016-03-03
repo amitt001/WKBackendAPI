@@ -130,6 +130,22 @@ def getRegex():
     return jsonify({'data':json_docs})
 
 
+@app.route('/postSampleRows', methods = ['POST'])
+@cross_origin()
+def postSampleRows():
+    data = request.get_json()
+    print data
+    r = requests.post('http://172.16.248.156:8090/jobs?appName=check&classPath=DataChecks.SampleRows', data= json.dumps(data))
+    return jsonify({'data': r.json()})
+
+@app.route('/getSampleRowsResult', methods = ['POST'])
+@cross_origin()
+def getSampleRowsResult():
+    jobId = request.get_json()
+    print jobId
+    r = requests.get('http://172.16.248.156:8090/jobs/'+jobId)
+    return jsonify({'data': r.json()})
+
 # Added code for Linkage
 
 def ngram(sentence,n):
