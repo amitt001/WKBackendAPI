@@ -537,13 +537,94 @@ def getClustersList():
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
-@app.route('/cluster/clear')
+def summaryData(queryDict):
+	"""
+		summary endpoints call this method
+			:Parameters:
+				queryDict: a dictionary to query from mongoDB
+	"""
+	clusterData = {}
+	print queryDict
+	try:
+		#db = MongoClient().testdb.testcol
+		col = db.LinkageOp1
+		#cst count
+		clusterData['noOfCSTs'] = col.count(queryDict)
+		#c count
+		clusterData['noOfCs'] = list(col.aggregate([
+							{'$match': queryDict},
+							{'$unwind': "$customer"},
+							{'$project': {'count': {'$add':1}}},
+							{'$group': 
+								{'_id': 'null', 'number': 
+									{'$sum': "$count"}}}]))[0]['number']
+		clusterData['revenue'] = list(col.aggregate([
+								{'$match': queryDict}, 
+								{'$group':
+									{'_id':'', 'revenue': 
+									{'$sum':'$revenue'}}}]))[0]['revenue']
+		for itm in ['cEmail', 'cAddress', 'cPhone']:
+			clusterData['noOf'+itm.lstrip('c')] = len(
+				filter(lambda x: x, col.distinct('customer.'+itm, queryDict)))
+		#clusterData['addresses'] = len(
+		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
+	except IndexError as err:
+		print err
+		clusterData = {"noOfCSTs": "",
+						"noOfCs": "", 
+						"revenue": "", 
+						"noOfEmail": "", 
+						"noOfAddress": "", 
+						"noOfPhone": ""}
+	except Exception as err:
+		import traceback
+		print traceback.format_exc()
+	return clusterData
+
+@app.route('/duns/summary', methods=['POST'])
 @cross_origin()
-def clearClusterResult():
-	payload = request.get_json()
-	source = payload['source']
-	version = payload['version']
-	db.Linkage.remove({"source":source,"version":version})
+def getSumary():
+	"""
+		returns summary of a cluster
+	"""
+
+	response_data = {}
+	queryDict = {}
+
+	payload = json.loads(ast.literal_eval(request.data)['data'])
+
+	clusterId = payload['clustId']
+
+	queryDict.update({'clusterId': clusterId})
+
+	if payload.get('source', ''):
+		queryDict.update({'source': payload.get('source', '').capitalize()})
+
+	if payload.get('version', ''):
+		queryDict.update({'version': payload.get('version', '')})
+
+	#FOR SUMMARY
+	data = summaryData(queryDict = queryDict)
+	response_data['summary'] = data
+
+	#db = MongoClient().testdb.testcol
+	col = db.LinkageOp1
+	#FOR PI CHART
+	pipeline = [
+		{'$match': {'clusterId': clusterId}},
+		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
+	print list(col.aggregate(pipeline))
+
+	#FOR MAP SUMMARY
+	data = []
+	for state in col.distinct('stateProvAbb', {'clusterId': clusterId}):
+		queryDict.update({'stateProvAbb': state})
+		dt = summaryData(queryDict = queryDict)
+		dt.update({'state':state})
+		data.append(dt)
+	response_data['map'] = data
+
+	return jsonify({'data': response_data})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
