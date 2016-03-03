@@ -344,6 +344,52 @@ def getMostFrequentWordOld(resultList):
 @cross_origin()
 def getClustersInfo():
 	payload = ast.literal_eval(request.data)
+	source = payload['source']
+	version = payload['version']
+	opData = {"name" : "bubble","children" : []}
+
+	# Added search functionality in cluster
+	pipeline = []
+	if 'search' in payload:
+		if payload['search'].strip() != '':
+			pipeline.append({ "$match": { "$text": { "$search": payload['search'] } } })
+
+	pipeline.extend([
+		{"$match":{"source":source,"version":version}},
+		{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}}
+	])
+	if 'clusterRange' in payload:
+		clusterRange = payload['clusterRange']
+		if "-" in clusterRange:
+			minRange = int(clusterRange.split("-")[0])
+			maxRange = int(clusterRange.split("-")[1])
+			pipeline.append({"$match":{"$and":[{"count":{"$gte":minRange,"$lte":maxRange}}]}})
+		else:
+			minRange = int(clusterRange.split("+")[0])
+			pipeline.append({"$match":{"count":{"$gte":minRange}}})
+
+	pipeline.extend([{"$sort":{"count":-1}},{"$limit":200 }])
+	
+	clusterCount = db.LinkageOp1.aggregate(pipeline)
+	idCount = 0
+	for doc in clusterCount:
+		currentDocId = doc["_id"]
+		idCount = idCount + 1
+		opNameList = []
+		for clusterElement in db.LinkageOp1.find({"source":source, "version":version, "clusterId":currentDocId}):
+			opNameList.append(clusterElement['cstName'])
+	
+		listLength = len(opNameList)
+		clusterName = getMostFrequentWord(opNameList)
+		clusterSize = listLength
+		singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
+		opData["children"].append(singleCluster)
+
+	return jsonify(**opData)
+
+# gives detailed output
+def getClustersInfoOld():
+	payload = ast.literal_eval(request.data)
 	# payload = {"source":"All","version":"1.0"}
 	source = payload['source']
 	version = payload['version']
@@ -395,53 +441,6 @@ def getClustersInfo():
 		# name we need to change
 		singleCluster = {"name":"a","children":singleClusterList}
 		opData["children"].append(singleCluster)
-	return jsonify(**opData)
-
-
-
-def getClustersInfoOld():
-	payload = ast.literal_eval(request.data)
-	source = payload['source']
-	version = payload['version']
-	opData = {"name" : "bubble","children" : []}
-
-	# Added search functionality in cluster
-	pipeline = []
-	if 'search' in payload:
-		if payload['search'].strip() != '':
-			pipeline.append({ "$match": { "$text": { "$search": payload['search'] } } })
-
-	pipeline.extend([
-		{"$match":{"source":source,"version":version}},
-		{"$group" : {"_id":"$clusterId", "count":{"$sum":1}}}
-	])
-	if 'clusterRange' in payload:
-		clusterRange = payload['clusterRange']
-		if "-" in clusterRange:
-			minRange = int(clusterRange.split("-")[0])
-			maxRange = int(clusterRange.split("-")[1])
-			pipeline.append({"$match":{"$and":[{"count":{"$gte":minRange,"$lte":maxRange}}]}})
-		else:
-			minRange = int(clusterRange.split("+")[0])
-			pipeline.append({"$match":{"count":{"$gte":minRange}}})
-
-	pipeline.extend([{"$sort":{"count":-1}},{"$limit":200 }])
-	
-	clusterCount = db.Linkage.aggregate(pipeline)
-	idCount = 0
-	for doc in clusterCount:
-		currentDocId = doc["_id"]
-		idCount = idCount + 1
-		opNameList = []
-		for clusterElement in db.Linkage.find({"source":source, "version":version, "clusterId":currentDocId}):
-			opNameList.append(clusterElement['name'])
-	
-		listLength = len(opNameList)
-		clusterName = getMostFrequentWord(opNameList)
-		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
-		opData["children"].append(singleCluster)
-
 	return jsonify(**opData)
 
 @app.route('/cluster/getClustersHistogram', methods = ['POST'])
