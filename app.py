@@ -369,7 +369,7 @@ def getClustersInfo():
 			minRange = int(clusterRange.split("+")[0])
 			pipeline.append({"$match":{"count":{"$gte":minRange}}})
 
-	pipeline.extend([{"$sort":{"count":-1}},{"$limit":200 }])
+	pipeline.extend([{"$sort":{"count":-1}},{"$limit":50 }])
 	
 	clusterCount = db.LinkageOp1.aggregate(pipeline)
 	idCount = 0
