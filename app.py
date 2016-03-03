@@ -613,11 +613,15 @@ def getSumary():
 
 	#db = MongoClient().testdb.testcol
 	col = db.LinkageOp1
+
 	#FOR PI CHART
 	pipeline = [
-		{'$match': {'clusterId': clusterId}},
+		{'$match': queryDict},
 		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
-	print list(col.aggregate(pipeline))
+	data = list(col.aggregate(pipeline))
+	for sg in data:
+		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+	response_data['pie'] = data
 
 	#FOR MAP SUMMARY
 	data = []
