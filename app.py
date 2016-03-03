@@ -581,7 +581,7 @@ def summaryData(queryDict):
 		print traceback.format_exc()
 	return clusterData
 
-@app.route('/duns/summary', methods=['POST'])
+@app.route('/logo/summary', methods=['POST'])
 @cross_origin()
 def getSumary():
 	"""
