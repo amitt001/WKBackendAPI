@@ -766,11 +766,11 @@ def get_dunsall():
 		for data in dataDuns:
 			if tmp.get(data['dunsNum']):
 				dataDuns[tmp.get(data['dunsNum'])-1]['presentInE1'] = True
-		response_data = {'response': dataDuns, , 'presentin': idx+1,'total': len(response_data)}
+		response_data = {'response': dataDuns,'presentin': idx+1,'total': len(response_data)}
 	except Exception as err:
 		# import traceback
 		# print(traceback.format_exc())
-		response_data = {'response': {}, , 'presentin': '','total': ''}
+		response_data = {'response': {},'presentin': '','total': ''}
 	return jsonify({'data': response_data})
 
 
