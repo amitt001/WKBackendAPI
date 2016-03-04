@@ -591,7 +591,7 @@ def summaryData(queryDict):
 		col = db.LinkageOp1
 		#cst count
 		clusterData['noOfCSTs'] = col.count(queryDict)
-        clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
+	        clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
                                          len(list(col.aggregate([{
                                         '$match': queryDict}, 
                                         {'$group': {'_id': 'cstNum', 
@@ -605,7 +605,7 @@ def summaryData(queryDict):
 							{'$group': 
 								{'_id': 'null', 'number': 
 									{'$sum': "$count"}}}]))[0]['number']
-        clusterData['noOfCDups'] = (clusterData['noOfCs']-
+        	clusterData['noOfCDups'] = (clusterData['noOfCs']-
                                         len(list(col.aggregate([
                                             {'$match': queryDict}, 
                                             {'$group': {'_id': 'customer.cName', 'items': 
