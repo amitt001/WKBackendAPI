@@ -376,18 +376,42 @@ def getClustersInfo():
 		currentDocId = doc["_id"]
 		idCount = idCount + 1
 		opNameList = []
+		opDNBNameList = []
+		opDNBNameDict = {}
 		for clusterElement in db.LinkageOp1.find({"source":source, "version":version, "clusterId":currentDocId}):
 			opNameList.append(clusterElement['cstName'])
-	
+			if 'globalUltDunsName' in clusterElement:
+				if clusterElement['globalUltDunsName'] is not None and clusterElement['globalUltDunsName'] != "":
+					opDNBNameList.append(clusterElement['globalUltDunsName'])
+					if clusterElement['globalUltDunsName'] not in opDNBNameDict:
+						opDNBNameDict[clusterElement['globalUltDunsName']] = 0
+					opDNBNameDict[clusterElement['globalUltDunsName']] += 1
+		
+		if len(opDNBNameList)>0:
+			if len(list(set(opDNBNameList))) == 1:
+				clusterName = opDNBNameList[0]
+			else:
+				# Check for 70% rule of DNBName
+				totalLengthValues = sum(opDNBNameDict.values())
+				if totalLengthValues > 0:
+					maxKey = max(opDNBNameDict, key=opDNBNameDict.get)
+					maxValue = opDNBNameDict[maxKey]
+					if maxValue*1.0/totalLengthValues>0.7:
+						clusterName = maxKey
+		else:
+			clusterName = ""
+
+
 		listLength = len(opNameList)
-		clusterName = getMostFrequentWord(opNameList)
+		if clusterName == "":
+			clusterName = getMostFrequentWord(opNameList)
 		clusterSize = listLength
 		singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
 
-# gives detailed output
+# gives detailed output ofcluster in it
 def getClustersInfoOld():
 	payload = ast.literal_eval(request.data)
 	# payload = {"source":"All","version":"1.0"}
