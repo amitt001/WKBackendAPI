@@ -390,7 +390,7 @@ def getClustersInfo():
 
 			opNameList.append(clusterElement['cstName'])
 			if 'globalUltDunsName' in clusterElement:
-				if clusterElement['globalUltDunsName'] is not None and clusterElement['globalUltDunsName'] != "":
+				if clusterElement['globalUltDunsName'] is not None and clusterElement['globalUltDunsName'] != "" and clusterElement['globalUltDunsName'] != "Unknown":
 					opDNBNameList.append(clusterElement['globalUltDunsName'])
 					if clusterElement['globalUltDunsName'] not in opDNBNameDict:
 						opDNBNameDict[clusterElement['globalUltDunsName']] = 0
