@@ -378,7 +378,16 @@ def getClustersInfo():
 		opNameList = []
 		opDNBNameList = []
 		opDNBNameDict = {}
+		revenue = 0
+		noOfC = 0
+		# Getting single CST as clusterElement in this loop
 		for clusterElement in db.LinkageOp1.find({"source":source, "version":version, "clusterId":currentDocId}):
+			if 'revenue' in clusterElement and clusterElement['revenue'] is not None:
+				revenue += clusterElement['revenue']
+
+			if 'customer' in clusterElement and clusterElement['customer'] is not None:
+				noOfC += len(clusterElement['customer'])
+
 			opNameList.append(clusterElement['cstName'])
 			if 'globalUltDunsName' in clusterElement:
 				if clusterElement['globalUltDunsName'] is not None and clusterElement['globalUltDunsName'] != "":
@@ -406,7 +415,7 @@ def getClustersInfo():
 		if clusterName == "":
 			clusterName = getMostFrequentWord(opNameList)
 		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
+		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
