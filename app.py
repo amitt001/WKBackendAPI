@@ -709,16 +709,16 @@ def get_cst_by_cluster():
 	col = db.LinkageOp1
 	response_data = []
 	for cst in col.find(queryDict, {'customer': 0, '_id':0}):
-		if cst['yr3BaseSaleAmt'] is not None and int(cst['yr3BaseSaleAmt']) == 0:
+		if cst.get('yr3BaseSaleAmt',None) is not None and int(cst['yr3BaseSaleAmt']) == 0:
 			cst['yr3BaseSaleAmt'] = ""
 
-		if cst['yr3EmployeeCount'] is not None and int(cst['yr3EmployeeCount']) == 0:
+		if cst.get('yr3EmployeeCount',None) is not None and int(cst['yr3EmployeeCount']) == 0:
 			cst['yr3EmployeeCount'] = ""
 
-		if cst['yrStarted'] is not None and int(cst['yrStarted']) == 0:
+		if cst.get('yrStarted',None) is not None and int(cst['yrStarted']) == 0:
 			cst['yrStarted'] = ""
 
-		if cst['globalUltDunsName'] is not None and cst['globalUltDunsName'] == 'Unknown':
+		if cst.get('globalUltDunsName',None) is not None and cst['globalUltDunsName'] == 'Unknown':
 			cst['globalUltDunsName'] = ""
 
 		response_data.append(cst)
