@@ -373,10 +373,12 @@ def getClustersInfo():
 	clusterCount = db.LinkageOp1.aggregate(pipeline)
 	idCount = 0
 	for doc in clusterCount:
+		score = 0.0
 		currentDocId = doc["_id"]
 		idCount = idCount + 1
 		opNameList = []
 		opDNBNameList = []
+		opDNBNumList = []
 		opDNBNameDict = {}
 		revenue = 0
 		noOfC = 0
@@ -395,6 +397,10 @@ def getClustersInfo():
 					if clusterElement['globalUltDunsName'] not in opDNBNameDict:
 						opDNBNameDict[clusterElement['globalUltDunsName']] = 0
 					opDNBNameDict[clusterElement['globalUltDunsName']] += 1
+
+			if 'globalUltDunsNum' in clusterElement:
+				if clusterElement['globalUltDunsNum'] is not None and clusterElement['globalUltDunsNum'] != "":
+					opDNBNumList.append(clusterElement['globalUltDunsNum'])
 		
 		if len(opDNBNameList)>0:
 			if len(list(set(opDNBNameList))) == 1:
@@ -410,12 +416,14 @@ def getClustersInfo():
 		else:
 			clusterName = ""
 
+		if len(opDNBNumList)>0:
+			score = 100.0/len(list(set(opDNBNumList)))
 
 		listLength = len(opNameList)
 		if clusterName == "":
 			clusterName = getMostFrequentWord(opNameList)
 		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"score" : "70","name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
+		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"score" : score,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
