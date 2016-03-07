@@ -1,5 +1,6 @@
 from flask import Flask, flash, redirect, url_for, request, get_flashed_messages, jsonify
 from pymongo import MongoClient
+import pymongo
 import json
 from bson import json_util
 import pycurl, json
@@ -675,6 +676,12 @@ def getSumary():
 	#db = MongoClient().testdb.testcol
 	col = db.LinkageOp1
 
+	# FOR globalUltDunsNum
+	globalUltDunsNumList = col.find(queryDict).distinct("globalUltDunsNum")
+	if len(globalUltDunsNumList) == 1:
+		globalUltDunsNum = globalUltDunsNumList[0]
+
+
 	#FOR PI CHART
 	pipeline = [
 		{'$match': queryDict},
@@ -773,6 +780,135 @@ def get_dunsall():
 		response_data = {'response': {},'presentin': '','total': ''}
 	return jsonify({'data': response_data})
 
+
+@app.route('/merge', methods=['POST'])
+@cross_origin()
+def merge():
+	response = {}
+
+	try:
+		payload = ast.literal_eval(request.data)
+		clusts = payload['clustIdList']
+		print csts
+		if isinstance(clusts, str):
+			clusts = list(clusts)
+
+		#db = MongoClient().testdb.testcol2
+		col = db.LinkageOp1
+		col2 = db.userMerged
+		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
+		cond = {'clusterId':{'$in': clusts}}
+		redc = 'function(curr, result) {}'
+		initial = {}
+		data = list(col.group(key, cond, initial, redc))
+
+		cid_e1cid = filter(lambda x: x[0], map(
+			lambda x: (x['clusterId'],x['e1ClusterId']), data))
+		#if csts belongs to no cluster i.e. clusterId = ''
+		#then set clusterId as some unique value
+		if not cid_e1cid:
+			clusterId = 'SPL' + '%.0f' % time.time()
+			cid_e1cid = [(clusterId, '')]
+
+		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
+		#store data of merged cluster
+		delete = []
+		names = []
+		final_data = {}
+		for e1cid, each in enumerate(data):
+			print each, max_cluster, type(each['cstNum'])
+			col.update(
+				{'cstNum': each['cstNum']},
+				{'$set': 
+					{'clusterId': max_cluster[0], 'e1ClusterId': e1cid}})
+
+			if not each['clusterId'] == max_cluster[0]:
+				delete.append({'clusterId': each['clusterId']})
+				names.append(each['dunsName'])
+
+			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
+			try:
+				col2.insert({'custerId': each['clusterId'], 'cstNums': csts})
+			except pymongo.errors.DuplicateKeyError as err:
+				for cst in csts:
+					col2.update({'custerId': each['clusterId'], {'$push': {'cstNums': cst}}})
+
+		final_data['delete'] = delete
+		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
+		#set names
+		if set(names) == 1:
+			final_data['update']['name'] = [names[0]]
+		else:
+			final_data['update']['name'] = getMostFrequentWord(names)
+
+		response = final_data
+
+	except Exception as err:
+		import traceback
+		print (traceback.format_exc())
+		response = {'data': {}}
+
+	return jsonify('data': response)
+
+
+@app.route('/split', methods=['POST'])
+@cross_origin()
+def split():
+	"""
+	Split
+	:Parameters:
+	multi: if multi is true
+			split in multiple clusters i.e set multiple clusterId
+		   else
+			split with same clusterID
+	"""
+	response = {}
+	try:
+		payload = ast.literal_eval(request.data)
+		csts = payload['cstList']
+		clusterId = payload['clusterId']
+		#multi = payload.get('multi', True)
+
+		if isinstance(csts, str):
+			csts = list(csts)
+
+		col = db.LinkageOp1
+		col2 = db.userSplit
+		delete = []
+
+		#if multi:
+		for e1cid, cs in enumerate(csts):
+			clusterId = 'SPL' + cs
+			delete.append({'clusterId': clusterId})
+			# Added by Ajay for e1ClusterId - as e1ClusterId cannot be set to Zero
+			col.update(
+				{'cstNum': cs}, {'$set': 
+				{'clusterId': clusterId, 'e1ClusterId': clusterId}})
+			#clusterid will always be unique
+			# Add the mainClusterCst and removedcluster cst  in array and keep it in split collection
+			col2.insert({'clusterId': clusterId, 'cstNum': [cs]})
+
+		#REMOVE THIS CODE LATER
+		"""else:
+				clusterId = 'SPL' + '%.0f' % time.time()
+				for e1cid, cs in enumerate(csts):
+					delete.append({'clusterId': clusterId})
+					col.update({'cstNum': cs}, {'$set':
+						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
+		"""
+		
+		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
+
+		final_data['delete'] = delete
+		final_data['name'] = getMostFrequentWord(names)
+		response = {'response': final_data}
+
+	except Exception as err:
+		import traceback
+		print (traceback.format_exc())
+		response = {'response': {}}
+
+	return jsonify({'data': final_data})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
