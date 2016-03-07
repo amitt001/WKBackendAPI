@@ -57,10 +57,11 @@ def runSparkJob():
 	js['response'] = json.loads(jobResponse.getvalue())
 	js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
 	cursor = db.configs.find({'configName': js['configName']})
+        print js
 	if cursor.count() == 0:
 		db.configs.save(js)
 	else:
-		db.configs.update({'configName': js['configName']}, {'$set':{'response': js['response'], 'jobId': js['jobId'], 'tables': js['tables'], 'columns': js['columns'], 'tables.Filter':js['tables']['Filter']}})
+		db.configs.update({'configName': js['configName']}, {'$set':{'response': js['response'], 'jobId': js['jobId'], 'tables': js['tables'], 'columns': js['columns']}})
 	return jobResponse.getvalue()
 
 @app.route('/getResults', methods = ['POST'])
