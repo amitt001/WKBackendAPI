@@ -58,7 +58,6 @@ def runSparkJob():
 	js['response'] = json.loads(jobResponse.getvalue())
 	js['jobId'] = json.loads(jobResponse.getvalue())['result']['jobId']
 	cursor = db.configs.find({'configName': js['configName']})
-        print js
 	if cursor.count() == 0:
 		db.configs.save(js)
 	else:
@@ -790,7 +789,6 @@ def merge():
 	try:
 		payload = ast.literal_eval(request.data)
 		clusts = payload['clustIdList']
-		print csts
 		if isinstance(clusts, str):
 			clusts = list(clusts)
 
@@ -817,7 +815,6 @@ def merge():
 		names = []
 		final_data = {}
 		for e1cid, each in enumerate(data):
-			print each, max_cluster, type(each['cstNum'])
 			col.update(
 				{'cstNum': each['cstNum']},
 				{'$set': 
@@ -832,7 +829,7 @@ def merge():
 				col2.insert({'custerId': each['clusterId'], 'cstNums': csts})
 			except pymongo.errors.DuplicateKeyError as err:
 				for cst in csts:
-					col2.update({'custerId': each['clusterId'], {'$push': {'cstNums': cst}}})
+					col2.update({'custerId': each['clusterId']}, {'$push': {'cstNums': cst}})
 
 		final_data['delete'] = delete
 		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
@@ -849,7 +846,7 @@ def merge():
 		print (traceback.format_exc())
 		response = {'data': {}}
 
-	return jsonify('data': response)
+	return jsonify({'data': response})
 
 
 @app.route('/split', methods=['POST'])
