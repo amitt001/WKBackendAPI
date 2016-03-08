@@ -583,7 +583,27 @@ def getClustersList():
 		if 'revenue' in doc:
 			revenue = doc['revenue']
 
-		singleCstData = {"cstName":doc['cstName'],"cstNum":doc['cstNum'],"revenue":revenue,"noOfC":noOfC}
+		#To get city 
+		try:
+			#if customer
+			cstCity = doc.get('customer', [{}])[0].get('cCity', '') 
+			#if no customer
+			if not cstCity:
+				if doc.get('stateProvAbb', ''):
+					indx = doc.get('address', '').split(',').index(doc['stateProvAbb'])
+					cstCity = doc.get('address', '').split(',')[indx-1]
+				else:
+					cstCity = ''
+		except Exception as err:
+			cstCity = ''
+
+		singleCstData = {"cstName":doc['cstName'],
+						"cstNum":doc['cstNum'],
+						"revenue":revenue,
+						"noOfC":noOfC,
+						"cstState": doc.get('stateProvAbb', ''),
+						"cstCity": cstCity
+						}
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
