@@ -657,7 +657,7 @@ def summaryData(queryDict, **kwargs):
 
 @app.route('/logo/summary', methods=['POST'])
 @cross_origin()
-def getSumary():
+def getSummary():
 	"""
 		returns summary of a cluster
 	"""
@@ -680,7 +680,7 @@ def getSumary():
 
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
-
+	print payload
 	#FOR SUMMARY
 	data = summaryData(queryDict = queryDict)
 	response_data['summary'] = data
@@ -688,13 +688,7 @@ def getSumary():
 	#db = MongoClient().testdb.testcol
 	col = db.LinkageOp1
 
-	# FOR globalUltDunsNum
-	globalUltDunsNumList = col.find(queryDict).distinct("globalUltDunsNum")
-	if len(globalUltDunsNumList) == 1:
-		globalUltDunsNum = globalUltDunsNumList[0]
-
-
-	#FOR PI CHART
+	#FOR PI CHART By Segment
 	pipeline = [
 		{'$match': queryDict},
 		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
@@ -704,12 +698,22 @@ def getSumary():
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
 	response_data['pie'] = new_data
+	#PI chart segment revenue
+	pipeline = [
+		{'$match': queryDict},
+		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
+	data = list(col.aggregate(pipeline))
+	new_data = []
+	for sg in data:
+		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+	response_data['pieRev'] = new_data
 
 	#FOR MAP SUMMARY
 	data = []
 	for state in col.distinct('stateProvAbb', {'clusterId': clusterId}):
 		queryDict.update({'stateProvAbb': state})
-		dt = summaryData(queryDict = queryDict)
+		dt = summaryData(queryDict = queryDict, is_map=True)
 		dt.update({'state':state})
 		data.append(dt)
 	response_data['map'] = data
