@@ -739,48 +739,6 @@ def get_cst_by_cluster():
 		response_data.append(cst)
 	return jsonify({'data': response_data})
 
-
-@app.route('/logo/dunsall', methods=['POST'])
-@cross_origin()
-def get_dunsall():
-	response_data = {}
-	try:
-		queryDict = {}
-		queryDictDuns = {}
-		queryDictLinkage = {}
-		payload = payload = ast.literal_eval(request.data)
-		# payload = {"globalUltDunsNum":"001024314", "clustId": "DNB001024314" ,"source": "All", "version": "1.0"}
-		clusterId = payload['clustId']
-		globalUltDunsNum = payload['globalUltDunsNum']
-
-		if payload.get('source', ''):
-			queryDict.update({'source': payload.get('source', '').capitalize()})
-
-		if payload.get('version', ''):
-			queryDict.update({'version': payload.get('version', '')})
-
-		queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
-		queryDictLinkage.update({'clusterId': clusterId})
-		queryDictLinkage.update(queryDict)
-
-		colDuns = db.Duns
-		colLinkage = db.LinkageOp1
-		dataDuns= list(colDuns.find(queryDictDuns))
-		dataLinkage = list(colLinkage.find(queryDictLinkage))
-		tmp = {}
-		for idx, d in enumerate(dataDuns):
-			tmp[d['dunsNum']] = idx+1
-		for data in dataDuns:
-			if tmp.get(data['dunsNum']):
-				dataDuns[tmp.get(data['dunsNum'])-1]['presentInE1'] = True
-		response_data = {'response': dataDuns,'presentin': idx+1,'total': len(response_data)}
-	except Exception as err:
-		# import traceback
-		# print(traceback.format_exc())
-		response_data = {'response': {},'presentin': '','total': ''}
-	return jsonify({'data': response_data})
-
-
 # @app.route('/merge', methods=['POST'])
 # @cross_origin()
 # def merge():
