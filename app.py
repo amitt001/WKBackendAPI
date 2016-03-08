@@ -755,132 +755,142 @@ def get_cst_by_cluster():
 		response_data.append(cst)
 	return jsonify({'data': response_data})
 
-# @app.route('/merge', methods=['POST'])
-# @cross_origin()
-# def merge():
-# 	response = {}
+@app.route('/merge', methods=['POST'])
+@cross_origin()
+def merge():
+	response = {}
 
-# 	try:
-# 		payload = ast.literal_eval(request.data)
-# 		clusts = payload['clustIdList']
-# 		if isinstance(clusts, str):
-# 			clusts = list(clusts)
+	try:
+		payload = ast.literal_eval(request.data)
+		clusts = payload['clustIdList']
+		print csts
+		if isinstance(clusts, str):
+			clusts = list(clusts)
 
-# 		#db = MongoClient().testdb.testcol2
-# 		col = db.LinkageOp1
-# 		col2 = db.userMerged
-# 		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
-# 		cond = {'clusterId':{'$in': clusts}}
-# 		redc = 'function(curr, result) {}'
-# 		initial = {}
-# 		data = list(col.group(key, cond, initial, redc))
-
-# 		cid_e1cid = filter(lambda x: x[0], map(
-# 			lambda x: (x['clusterId'],x['e1ClusterId']), data))
-# 		#if csts belongs to no cluster i.e. clusterId = ''
-# 		#then set clusterId as some unique value
-# 		if not cid_e1cid:
-# 			clusterId = 'SPL' + '%.0f' % time.time()
-# 			cid_e1cid = [(clusterId, '')]
-
-# 		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
-# 		#store data of merged cluster
-# 		delete = []
-# 		names = []
-# 		final_data = {}
-# 		for e1cid, each in enumerate(data):
-# 			col.update(
-# 				{'cstNum': each['cstNum']},
-# 				{'$set': 
-# 					{'clusterId': max_cluster[0], 'e1ClusterId': e1cid}})
-
-# 			if not each['clusterId'] == max_cluster[0]:
-# 				delete.append({'clusterId': each['clusterId']})
-# 				names.append(each['dunsName'])
-
-# 			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
-# 			try:
-# 				col2.insert({'custerId': each['clusterId'], 'cstNums': csts})
-# 			except pymongo.errors.DuplicateKeyError as err:
-# 				for cst in csts:
-# 					col2.update({'custerId': each['clusterId']}, {'$push': {'cstNums': cst}})
-
-# 		final_data['delete'] = delete
-# 		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
-# 		#set names
-# 		if set(names) == 1:
-# 			final_data['update']['name'] = [names[0]]
-# 		else:
-# 			final_data['update']['name'] = getMostFrequentWord(names)
-
-# 		response = final_data
-
-# 	except Exception as err:
-# 		import traceback
-# 		print (traceback.format_exc())
-# 		response = {'data': {}}
-
-# 	return jsonify({'data': response})
-
-
-# @app.route('/split', methods=['POST'])
-# @cross_origin()
-# def split():
-# 	"""
-# 	Split
-# 	:Parameters:
-# 	multi: if multi is true
-# 			split in multiple clusters i.e set multiple clusterId
-# 		   else
-# 			split with same clusterID
-# 	"""
-# 	response = {}
-# 	try:
-# 		payload = ast.literal_eval(request.data)
-# 		csts = payload['cstList']
-# 		clusterId = payload['clusterId']
-# 		#multi = payload.get('multi', True)
-
-# 		if isinstance(csts, str):
-# 			csts = list(csts)
-
-# 		col = db.LinkageOp1
-# 		col2 = db.userSplit
-# 		delete = []
-
-# 		#if multi:
-# 		for e1cid, cs in enumerate(csts):
-# 			clusterId = 'SPL' + cs
-# 			delete.append({'clusterId': clusterId})
-# 			# Added by Ajay for e1ClusterId - as e1ClusterId cannot be set to Zero
-# 			col.update(
-# 				{'cstNum': cs}, {'$set': 
-# 				{'clusterId': clusterId, 'e1ClusterId': clusterId}})
-# 			#clusterid will always be unique
-# 			# Add the mainClusterCst and removedcluster cst  in array and keep it in split collection
-# 			col2.insert({'clusterId': clusterId, 'cstNum': [cs]})
-
-# 		#REMOVE THIS CODE LATER
-# 		"""else:
-# 				clusterId = 'SPL' + '%.0f' % time.time()
-# 				for e1cid, cs in enumerate(csts):
-# 					delete.append({'clusterId': clusterId})
-# 					col.update({'cstNum': cs}, {'$set':
-# 						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
-# 		"""
+		col = db.LinkageOp1
+		col2 = db.userCollection
 		
-# 		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
+		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
+		cond = {'clusterId':{'$in': clusts}}
+		redc = 'function(curr, result) {}'
+		initial = {}
+		data = list(col.group(key, cond, initial, redc))
 
-# 		final_data['delete'] = delete
-# 		final_data['name'] = getMostFrequentWord(names)
-# 		response = {'response': final_data}
+		allCstNum = map(lambda x: x['cstNum'], data)
+		userColObjId = col2.insert({'csts': allCstNum})
 
-# 	except Exception as err:
-# 		import traceback
-# 		print (traceback.format_exc())
-# 		response = {'response': {}}
+		cid_e1cid = filter(lambda x: x[0], map(
+			lambda x: (x['clusterId'],x['e1ClusterId']), data))
+		#if csts belongs to no cluster i.e. clusterId = ''
+		#then set clusterId as some unique value
+		if not cid_e1cid:
+			clusterId = 'SPL' + '%.0f' % time.time()
+			cid_e1cid = [(clusterId, '')]
 
-# 	return jsonify({'data': final_data})
+		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
+
+		#store data of merged cluster
+		delete = []
+		names = []
+		final_data = {}
+		for e1cid, each in enumerate(data):
+			print each, max_cluster, type(each['cstNum'])
+			col.update(
+				{'cstNum': each['cstNum']},
+				{'$set': 
+					{'clusterId': max_cluster[0], 'userClusterId': str(userColObjId)}})
+
+			if not each['clusterId'] == max_cluster[0]:
+				delete.append({'clusterId': each['clusterId']})
+				names.append(each['dunsName'])
+
+			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
+
+		final_data['delete'] = delete
+		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
+		#set names
+		if set(names) == 1:
+			final_data['update']['name'] = [names[0]]
+		else:
+			final_data['update']['name'] = getMostFrequentWord(names)
+
+		response = final_data
+
+	except Exception as err:
+		import traceback
+		print (traceback.format_exc())
+		response = {}
+
+	return jsonify({'data': response})
+
+
+@app.route('/split', methods=['POST'])
+@cross_origin()
+def split():
+	"""
+	Split
+	:Parameters:
+	multi: if multi is true
+			split in multiple clusters i.e set multiple clusterId
+		   else
+			split with same clusterID
+	"""
+	try:
+		payload = ast.literal_eval(request.data)
+		csts = payload['cstList']
+		clusterId = payload['clusterId']
+		#multi = payload.get('multi', True)
+
+		if isinstance(csts, str):
+			csts = list(csts)
+
+		col = db.LinkageOp1
+		col2 = db.userCollection
+
+		delete = []
+		final_data = {}
+		allCsts = map(
+				lambda x: x['cstNum'],
+				col.find({'clusterId': clusterId}, {'_id':0, 'cstNum':1}))
+		print allCsts, csts
+		for c in csts:
+			allCsts.remove(c)
+
+		import time
+		userColObjId = col2.insert({'oldClustCsts': allCsts, 'newClustCsts': csts})
+		clusterId = 'SPL' + '%.0f' % time.time()
+		for e1cid, cs in enumerate(csts):
+			#clusterId = 'SPL' + cs
+			delete.append({'csts': cs})
+
+			col.update(
+				{'cstNum': cs}, {'$set':
+				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
+			#clusterid will always be unique
+			#col2.insert({'cstsOld': [cs], 'cstsNew': })
+
+		#REMOVE THIS CODE LATER
+		"""else:
+				clusterId = 'SPL' + '%.0f' % time.time()
+				for e1cid, cs in enumerate(csts):
+					delete.append({'clusterId': clusterId})
+					col.update({'cstNum': cs}, {'$set':
+						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
+		"""
+		
+		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
+
+		final_data['delete'] = delete
+		final_data['name'] = getMostFrequentWord(names)
+		response = final_data
+
+	except Exception as err:
+		import traceback
+		print (traceback.format_exc())
+		response = {}
+
+	return jsonify({'data': response})
+	
 @app.route('/logo/dunsall', methods=['POST'])
 @cross_origin()
 def get_dunsall():
