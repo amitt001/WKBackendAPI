@@ -874,6 +874,11 @@ def split():
 		payload = ast.literal_eval(request.data)
 		csts = payload['cstList']
 		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
 		#multi = payload.get('multi', True)
 
 		if isinstance(csts, str):
@@ -886,7 +891,7 @@ def split():
 		final_data = {}
 		allCsts = map(
 				lambda x: x['cstNum'],
-				col.find({'clusterId': clusterId}, {'_id':0, 'cstNum':1}))
+				col.find(queryDict, {'_id':0, 'cstNum':1}))
 		print allCsts, csts
 		for c in csts:
 			allCsts.remove(c)
@@ -897,9 +902,15 @@ def split():
 		for e1cid, cs in enumerate(csts):
 			#clusterId = 'SPL' + cs
 			delete.append({'csts': cs})
+			query = {'cstNum': cs}
+
+			if payload.get('source'):
+				query['source'] = payload['source']
+			if payload.get('version'):
+				query['version'] = payload['version']
 
 			col.update(
-				{'cstNum': cs}, {'$set':
+				query, {'$set':
 				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
 			#clusterid will always be unique
 			#col2.insert({'cstsOld': [cs], 'cstsNew': })
@@ -925,6 +936,7 @@ def split():
 		response = {}
 
 	return jsonify({'data': response})
+	
 	
 @app.route('/logo/dunsall', methods=['POST'])
 @cross_origin()
