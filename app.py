@@ -873,9 +873,7 @@ def get_dunsall():
         queryDict = {}
         queryDictDuns = {}
         queryDictLinkage = {}
-        #payload = ast.literal_eval(request.data)
-        import json
-        payload = json.loads(request.data)
+        payload = ast.literal_eval(request.data)
         #payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
         clusterId = payload['clustId']
         globalUltDunsNum = payload['globalUltDunsNum']
