@@ -587,7 +587,7 @@ def getClustersList():
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
-def summaryData(queryDict):
+def summaryData(queryDict, **kwargs):
 	"""
 		summary endpoints call this method
 			:Parameters:
@@ -600,10 +600,11 @@ def summaryData(queryDict):
 		col = db.LinkageOp1
 		#cst count
 		clusterData['noOfCSTs'] = col.count(queryDict)
+		#Duplicate
 		clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
 										 len(list(col.aggregate([{
 										'$match': queryDict}, 
-										{'$group': {'_id': 'cstNum', 
+										{'$group': {'_id': 'cstNum',
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
 		#c count
@@ -611,20 +612,26 @@ def summaryData(queryDict):
 							{'$match': queryDict},
 							{'$unwind': "$customer"},
 							{'$project': {'count': {'$add':1}}},
-							{'$group': 
+							{'$group':
 								{'_id': 'null', 'number': 
 									{'$sum': "$count"}}}]))[0]['number']
+		#Duplicate
 		clusterData['noOfCDups'] = (clusterData['noOfCs']-
 										len(list(col.aggregate([
-											{'$match': queryDict}, 
-											{'$group': {'_id': 'customer.cName', 'items': 
+											{'$match': queryDict},
+											{'$group': {'_id': 'customer.cName', 'items':
 											{'$addToSet': "$customer.cName"}}}]))[0]['items']))
-		
+												
 		clusterData['revenue'] = list(col.aggregate([
 								{'$match': queryDict}, 
 								{'$group':
 									{'_id':'', 'revenue': 
 									{'$sum':'$revenue'}}}]))[0]['revenue']
+		if kwargs.get('is_map'):
+			clusterData['yr3BaseSaleAmt'] = map(
+											lambda x:x['yr3BaseSaleAmt'], 
+											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1})))
+
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
 			clusterData['noOf'+itm.lstrip('c')] = len(
 				filter(lambda x: x, col.distinct('customer.'+itm, queryDict)))
@@ -633,11 +640,16 @@ def summaryData(queryDict):
 	except IndexError as err:
 		print err
 		clusterData = {"noOfCSTs": "",
-						"noOfCs": "", 
+						"noOfCstDups": "",
+						"noOfCs": "",
+						"noOfCDups": "", 
 						"revenue": "", 
 						"noOfEmail": "", 
 						"noOfAddress": "", 
 						"noOfPhone": ""}
+		if kwargs.get('is_map'):
+			clusterData.update({'yr3BaseSaleAmt': ""})
+
 	except Exception as err:
 		import traceback
 		print traceback.format_exc()
