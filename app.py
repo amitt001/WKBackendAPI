@@ -763,7 +763,7 @@ def merge():
 	try:
 		payload = ast.literal_eval(request.data)
 		clusts = payload['clustIdList']
-		print csts
+
 		if isinstance(clusts, str):
 			clusts = list(clusts)
 
@@ -772,6 +772,13 @@ def merge():
 		
 		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
 		cond = {'clusterId':{'$in': clusts}}
+
+		cond = {'clusterId':{'$in': clusts}}
+		if payload.get('source'):
+			cond['source'] = payload['source']
+		if payload.get('version'):
+			cond['version'] = payload['version']
+
 		redc = 'function(curr, result) {}'
 		initial = {}
 		data = list(col.group(key, cond, initial, redc))
@@ -794,22 +801,30 @@ def merge():
 		names = []
 		final_data = {}
 		for e1cid, each in enumerate(data):
-			print each, max_cluster, type(each['cstNum'])
+			queryDict = {'cstNum': each['cstNum']}
+			if payload.get('source'):
+				queryDict.update({'source': payload['source']})
+			if payload.get('version'):
+				queryDict.update({'version': payload['version']})
+			#print each, max_cluster, type(each['cstNum'])
 			col.update(
-				{'cstNum': each['cstNum']},
+				queryDict,
 				{'$set': 
 					{'clusterId': max_cluster[0], 'userClusterId': str(userColObjId)}})
 
 			if not each['clusterId'] == max_cluster[0]:
-				delete.append({'clusterId': each['clusterId']})
-				names.append(each['dunsName'])
+				if each.get('dunsName', False):
+					names.append(each['dunsName'])
 
 			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
-
+		delete = clusts
+		delete.remove(max_cluster[0])
 		final_data['delete'] = delete
 		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
 		#set names
-		if set(names) == 1:
+		if not names:
+			final_data['update']['name'] = ''
+		elif set(names) == 1:
 			final_data['update']['name'] = [names[0]]
 		else:
 			final_data['update']['name'] = getMostFrequentWord(names)
