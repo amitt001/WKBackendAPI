@@ -628,9 +628,9 @@ def summaryData(queryDict, **kwargs):
 									{'_id':'', 'revenue': 
 									{'$sum':'$revenue'}}}]))[0]['revenue']
 		if kwargs.get('is_map'):
-			clusterData['yr3BaseSaleAmt'] = map(
-											lambda x:x['yr3BaseSaleAmt'], 
-											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1})))
+			clusterData['yr3BaseSaleAmt'] = sum(map(
+											lambda x:int(x['yr3BaseSaleAmt']), 
+											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
 
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
 			clusterData['noOf'+itm.lstrip('c')] = len(
