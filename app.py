@@ -907,6 +907,56 @@ def get_dunsall():
 # 		response = {'response': {}}
 
 # 	return jsonify({'data': final_data})
+@app.route('/logo/dunsall', methods=['POST'])
+@cross_origin()
+def get_dunsall():
+    response_data = {}
+    try:
+        queryDict = {}
+        queryDictDuns = {}
+        queryDictLinkage = {}
+        #payload = ast.literal_eval(request.data)
+        import json
+        payload = json.loads(request.data)
+        #payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
+        clusterId = payload['clustId']
+        globalUltDunsNum = payload['globalUltDunsNum']
+
+        if payload.get('source', ''):
+            queryDict.update({'source': payload.get('source', '').capitalize()})
+
+        if payload.get('version', ''):
+            queryDict.update({'version': payload.get('version', '')})
+
+        queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
+        queryDictLinkage.update({'clusterId': clusterId})
+        queryDictLinkage.update(queryDict)
+
+        colDuns = db.Duns
+        colLinkage = db.LinkageOp1
+
+        dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
+        dataLinkage = list(colLinkage.find(queryDictLinkage))
+
+        tmp = {}
+        #hashmap of index of a perticular dunsNum in dataDuns
+        for idx, d in enumerate(dataDuns):
+            tmp[d['dunsNum']] = idx+1
+
+        index = 0
+        for data in dataLinkage:
+            if tmp.get(data['dunsNum']):
+            	if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
+            		index += 1
+                	dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
+
+                print index, tmp[data['dunsNum']], data['dunsNum']
+        response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
+    except Exception as err:
+        import traceback
+        print(traceback.format_exc())
+        response_data = {'response': {}, 'presentin': '','total': ''}
+    return jsonify({'data': response_data})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
