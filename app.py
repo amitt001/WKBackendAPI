@@ -349,8 +349,12 @@ def getClustersInfo():
 	source = payload['source']
 	version = payload['version']
 	queryDict = {"source":source,"version":version}
+	
 	if payload.get('segment'):
-		queryDict.update({'segment': payload['segment']})
+		if payload['segment'] == 'misc':
+			queryDict.update({'segment': {'$in': [None, '', 'Do Not Use']}})
+		else:
+			queryDict.update({'segment': payload['segment']})
 
 	opData = {"name" : "bubble","children" : []}
 
@@ -569,15 +573,19 @@ def getClustersHistogram():
 def getClusterTablesInfo():
 	opData = {}
 	try:
+		misc_list = [None, '', 'Do Not Use']
+		col = db.LinkageOp1
 		for source in db.Linkage.distinct("source"):
 			opData[source] = []
 			data = {}
-			for version in db.Linkage.find({"source":source}).distinct("version"):
+			for version in col.find({"source":source}).distinct("version"):
 				data['version'] = version
-				data['segment'] = map(
-					lambda x: x['segment'], db.Linkage.find({
+				s = set(map(
+					lambda x: x['segment'], col.find({
 					"source":source, 
-					"version": version}, {'_id':0, 'segment':1}))
+					"version": version}, {'_id':0, 'segment':1})))
+				s = list(set([i if not i in misc_list else 'misc' for i in s]))
+				data['segment'] = s
 				opData[source].append(data)
 	except Exception as err:
 		print(traceback.format_exc)
