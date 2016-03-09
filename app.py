@@ -563,6 +563,7 @@ def getClustersHistogram():
 		opData["Freq"].append({"x":clusterSize,"y":clusterFrequencyAndOrder['value'],"order":clusterFrequencyAndOrder['order']})
 	return jsonify(**opData)
 
+
 @app.route('/cluster/getTablesInfo')
 @cross_origin()
 def getClusterTablesInfo():
@@ -582,6 +583,7 @@ def getClusterTablesInfo():
 		print(traceback.format_exc)
 
 	return jsonify({'data':opData})
+	
 
 @app.route('/cluster/getClustersList', methods = ['POST'])
 @cross_origin()
@@ -623,6 +625,7 @@ def getClustersList():
 						}
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
+
 
 def summaryData(queryDict, **kwargs):
 	"""
@@ -688,7 +691,8 @@ def summaryData(queryDict, **kwargs):
 			clusterData.update({'yr3BaseSaleAmt': ""})
 
 	except Exception as err:
-		print (traceback.format_exc())
+		import traceback
+		print traceback.format_exc()
 	return clusterData
 
 @app.route('/logo/summary', methods=['POST'])
@@ -868,6 +872,7 @@ def merge():
 		response = final_data
 
 	except Exception as err:
+		import traceback
 		print (traceback.format_exc())
 		response = {}
 
@@ -946,6 +951,7 @@ def split():
 		response = final_data
 
 	except Exception as err:
+		import traceback
 		print (traceback.format_exc())
 		response = {}
 
@@ -996,6 +1002,7 @@ def get_dunsall():
 				print index, tmp[data['dunsNum']], data['dunsNum']
 		response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
 	except Exception as err:
+		import traceback
 		print(traceback.format_exc())
 		response_data = {'response': {}, 'presentin': '','total': ''}
 	return jsonify({'data': response_data})
