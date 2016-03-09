@@ -349,9 +349,9 @@ def getClustersInfo():
 	source = payload['source']
 	version = payload['version']
 	queryDict = {"source":source,"version":version}
-	
+
 	if payload.get('segment'):
-		if payload['segment'] == 'misc':
+		if payload['segment'].lower() == 'misc':
 			queryDict.update({'segment': {'$in': [None, '', 'Do Not Use']}})
 		else:
 			queryDict.update({'segment': payload['segment']})
@@ -584,7 +584,7 @@ def getClusterTablesInfo():
 					lambda x: x['segment'], col.find({
 					"source":source, 
 					"version": version}, {'_id':0, 'segment':1})))
-				s = list(set([i if not i in misc_list else 'misc' for i in s]))
+				s = list(set([i if not i in misc_list else 'Misc' for i in s]))
 				data['segment'] = s
 				opData[source].append(data)
 	except Exception as err:
@@ -743,7 +743,7 @@ def getSummary():
 	data = list(col.aggregate(pipeline))
 	new_data = []
 	for sg in data:
-		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+		sg['_id'].lower() = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
 	response_data['pie'] = new_data
 	#PI chart segment revenue
@@ -753,7 +753,7 @@ def getSummary():
 	data = list(col.aggregate(pipeline))
 	new_data = []
 	for sg in data:
-		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+		sg['_id'].lower() = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
 	response_data['pieRev'] = new_data
 
