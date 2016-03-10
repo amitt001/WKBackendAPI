@@ -503,12 +503,12 @@ def getClustersHistogram():
 	version = payload['version']
 
 	queryDict = {"source":source,"version":version}
-	
+
 	# Added search functionality in cluster
 	if 'search' in payload:
 		if payload['search'].strip() != '':
 			pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
-			queryDict['search'] = payload['search']
+			queryDict.update({"$text": {"$search":payload['search']}})
 		else:
 			pipeline = []
 	else:
