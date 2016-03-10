@@ -9,6 +9,7 @@ import cStringIO
 import ast
 import requests
 import re
+import traceback
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -347,6 +348,14 @@ def getClustersInfo():
 	payload = ast.literal_eval(request.data)
 	source = payload['source']
 	version = payload['version']
+	queryDict = {"source":source,"version":version}
+
+	if payload.get('segment'):
+		if payload['segment'].lower() == 'misc':
+			queryDict.update({'segment': {'$in': [None, '', 'Do Not Use']}})
+		else:
+			queryDict.update({'segment': payload['segment']})
+
 	opData = {"name" : "bubble","children" : []}
 
 	# Added search functionality in cluster
@@ -493,10 +502,13 @@ def getClustersHistogram():
 	source = payload['source']
 	version = payload['version']
 
+	queryDict = {"source":source,"version":version}
+
 	# Added search functionality in cluster
 	if 'search' in payload:
 		if payload['search'].strip() != '':
 			pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+			queryDict.update({"$text": {"$search":payload['search']}})
 		else:
 			pipeline = []
 	else:
@@ -519,7 +531,7 @@ def getClustersHistogram():
 						"1001-5000":{"value":0,"order":7},
 						"5001+":{"value":0,"order":8},
 					}
-	numberOfUniqueEntities = db.LinkageOp1.count({"source":source,"version":version})
+	numberOfUniqueEntities = db.LinkageOp1.count(queryDict)
 	numberOfClusters = 0
 	clusterFrequencyResults = db.LinkageOp1.aggregate(pipeline)
 	for clusterFrequencyResult in clusterFrequencyResults:
@@ -558,13 +570,31 @@ def getClustersHistogram():
 		opData["Freq"].append({"x":clusterSize,"y":clusterFrequencyAndOrder['value'],"order":clusterFrequencyAndOrder['order']})
 	return jsonify(**opData)
 
+
 @app.route('/cluster/getTablesInfo')
 @cross_origin()
 def getClusterTablesInfo():
 	opData = {}
-	for source in db.LinkageOp1.distinct("source"):
-		opData[source] = db.LinkageOp1.find({"source":source}).distinct("version")
+	try:
+		misc_list = [None, '', 'Do Not Use']
+		col = db.LinkageOp1
+		for source in db.Linkage.distinct("source"):
+			opData[source] = []
+			data = {}
+			for version in col.find({"source":source}).distinct("version"):
+				data['version'] = version
+				s = set(map(
+					lambda x: x['segment'], col.find({
+					"source":source, 
+					"version": version}, {'_id':0, 'segment':1})))
+				s = list(set([i if not i in misc_list else 'Misc' for i in s]))
+				data['segment'] = s
+				opData[source].append(data)
+	except Exception as err:
+		print(traceback.format_exc)
+
 	return jsonify({'data':opData})
+	
 
 @app.route('/cluster/getClustersList', methods = ['POST'])
 @cross_origin()
@@ -606,6 +636,7 @@ def getClustersList():
 						}
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
+
 
 def summaryData(queryDict, **kwargs):
 	"""
@@ -941,51 +972,51 @@ def split():
 @app.route('/logo/dunsall', methods=['POST'])
 @cross_origin()
 def get_dunsall():
-    response_data = {}
-    try:
-        queryDict = {}
-        queryDictDuns = {}
-        queryDictLinkage = {}
-        payload = ast.literal_eval(request.data)
-        #payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
-        clusterId = payload['clustId']
-        globalUltDunsNum = payload['globalUltDunsNum']
+	response_data = {}
+	try:
+		queryDict = {}
+		queryDictDuns = {}
+		queryDictLinkage = {}
+		payload = ast.literal_eval(request.data)
+		#payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
+		clusterId = payload['clustId']
+		globalUltDunsNum = payload['globalUltDunsNum']
 
-        if payload.get('source', ''):
-            queryDict.update({'source': payload.get('source', '').capitalize()})
+		if payload.get('source', ''):
+			queryDict.update({'source': payload.get('source', '').capitalize()})
 
-        if payload.get('version', ''):
-            queryDict.update({'version': payload.get('version', '')})
+		if payload.get('version', ''):
+			queryDict.update({'version': payload.get('version', '')})
 
-        queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
-        queryDictLinkage.update({'clusterId': clusterId})
-        queryDictLinkage.update(queryDict)
+		queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
+		queryDictLinkage.update({'clusterId': clusterId})
+		queryDictLinkage.update(queryDict)
 
-        colDuns = db.Duns
-        colLinkage = db.LinkageOp1
+		colDuns = db.Duns
+		colLinkage = db.LinkageOp1
 
-        dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
-        dataLinkage = list(colLinkage.find(queryDictLinkage))
+		dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
+		dataLinkage = list(colLinkage.find(queryDictLinkage))
 
-        tmp = {}
-        #hashmap of index of a perticular dunsNum in dataDuns
-        for idx, d in enumerate(dataDuns):
-            tmp[d['dunsNum']] = idx+1
+		tmp = {}
+		#hashmap of index of a perticular dunsNum in dataDuns
+		for idx, d in enumerate(dataDuns):
+			tmp[d['dunsNum']] = idx+1
 
-        index = 0
-        for data in dataLinkage:
-            if tmp.get(data['dunsNum']):
-            	if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
-            		index += 1
-                	dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
+		index = 0
+		for data in dataLinkage:
+			if tmp.get(data['dunsNum']):
+				if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
+					index += 1
+					dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
 
-                print index, tmp[data['dunsNum']], data['dunsNum']
-        response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
-    except Exception as err:
-        import traceback
-        print(traceback.format_exc())
-        response_data = {'response': {}, 'presentin': '','total': ''}
-    return jsonify({'data': response_data})
+				print index, tmp[data['dunsNum']], data['dunsNum']
+		response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = {'response': {}, 'presentin': '','total': ''}
+	return jsonify({'data': response_data})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
