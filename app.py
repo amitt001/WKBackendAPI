@@ -502,10 +502,13 @@ def getClustersHistogram():
 	source = payload['source']
 	version = payload['version']
 
+	queryDict = {"source":source,"version":version}
+	
 	# Added search functionality in cluster
 	if 'search' in payload:
 		if payload['search'].strip() != '':
 			pipeline = [{ "$match": { "$text": { "$search": payload['search'] } } }]
+			queryDict['search'] = payload['search']
 		else:
 			pipeline = []
 	else:
@@ -528,7 +531,7 @@ def getClustersHistogram():
 						"1001-5000":{"value":0,"order":7},
 						"5001+":{"value":0,"order":8},
 					}
-	numberOfUniqueEntities = db.LinkageOp1.count({"source":source,"version":version})
+	numberOfUniqueEntities = db.LinkageOp1.count(queryDict)
 	numberOfClusters = 0
 	clusterFrequencyResults = db.LinkageOp1.aggregate(pipeline)
 	for clusterFrequencyResult in clusterFrequencyResults:
