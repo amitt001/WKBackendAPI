@@ -578,20 +578,11 @@ def getClusterTablesInfo():
 	try:
 		misc_list = [None, '', 'Do Not Use']
 		col = db.LinkageOp1
+		opData = {}
 		for source in db.Linkage.distinct("source"):
-			opData[source] = []
-			data = {}
-			for version in col.find({"source":source}).distinct("version"):
-				data['version'] = version
-				s = set(map(
-					lambda x: x['segment'], col.find({
-					"source":source, 
-					"version": version}, {'_id':0, 'segment':1})))
-				s = list(set([i if not i in misc_list else 'Misc' for i in s]))
-				data['segment'] = s
-				opData[source].append(data)
+			opData[source] = col.find({"source":source}).distinct("version")
 	except Exception as err:
-		print(traceback.format_exc)
+		print(traceback.format_exc())
 
 	return jsonify({'data':opData})
 	
