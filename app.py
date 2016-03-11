@@ -579,7 +579,7 @@ def getClusterTablesInfo():
 		misc_list = [None, '', 'Do Not Use']
 		col = db.LinkageOp1
 		opData = {}
-		for source in db.Linkage.distinct("source"):
+		for source in db.LinkageOp1.distinct("source"):
 			opData[source] = col.find({"source":source}).distinct("version")
 	except Exception as err:
 		print(traceback.format_exc())
@@ -618,8 +618,8 @@ def getClustersList():
 		except Exception as err:
 			cstCity = ''
 
-		singleCstData = {"cstName":doc['cstName'],
-						"cstNum":doc['cstNum'],
+		singleCstData = {"cstName":doc['cstName'],"globalUltDunsNum":doc['globalUltDunsNum'],
+						"cstNum":doc['cstNum'],"globalUltDunsName":doc['globalUltDunsName'],
 						"revenue":revenue,
 						"noOfC":noOfC,
 						"cstState": doc.get('stateProvAbb', ''),
