@@ -400,7 +400,7 @@ def getClustersInfo():
 			{"$match":{"source":source,"version":version,"clusterId":currentDocId}},
 			{"$group":{"_id":"$clusterId",
 			"revenue":{"$sum":"$revenue"},
-			"count":{"$sum":"1"},
+			"count":{"$sum":1},
 			"cList" : {"$addToSet":"$customer.cNum"},
 			"cstNameList":{"$push":"$cstName"},
 			"dnbNameList":{"$push":"$globalUltDunsName"},
