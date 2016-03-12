@@ -400,7 +400,7 @@ def getClustersInfo():
 			{"$match":{"source":source,"version":version,"clusterId":currentDocId}},
 			{"$group":{"_id":"$clusterId",
 			"revenue":{"$sum":"$revenue"},
-			"count":{"$sum":1},
+			"count":{"$sum":"1"},
 			"cList" : {"$addToSet":"$customer.cNum"},
 			"cstNameList":{"$push":"$cstName"},
 			"dnbNameList":{"$push":"$globalUltDunsName"},
@@ -633,7 +633,9 @@ def getClustersList():
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
-
+# Do not make genearlized function until required
+# Try to optimize the query and do not use aggregate like this
+# For one task one aggregate function
 def summaryData(queryDict, **kwargs):
 	"""
 		summary endpoints call this method
@@ -710,42 +712,38 @@ def getSummary():
 	"""
 	response_data = {}
 	queryDict = {}
-	
-	# outfile = open("output.txt","wb")
-	# outfile.write("---")
-	# payload = json.loads(ast.literal_eval(request.data)['data'])
 	payload = ast.literal_eval(request.data)
-	# outfile.write(str(payload))
-	# outfile.write("@@@@-------")
-	# outfile.close()
+	# We require these 3 data as it is not optional
+	# We can pass a message to API if these call is not valid
 	clusterId = payload['clustId']
-
 	queryDict.update({'clusterId': clusterId})
 
 	if payload.get('source', ''):
-		queryDict.update({'source': payload.get('source', '').capitalize()})
+		queryDict.update({'source': payload.get('source', '')})
 
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
-	print payload
-	#FOR SUMMARY
+
 	data = summaryData(queryDict = queryDict)
 	response_data['summary'] = data
 
 	#db = MongoClient().testdb.testcol
 	col = db.LinkageOp1
 
-	#FOR PI CHART By Segment
+	#FOR Pie CHART By Segment
 	pipeline = [
 		{'$match': queryDict},
 		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
+
 	data = list(col.aggregate(pipeline))
 	new_data = []
+	# Adding Misc. for some of the category
 	for sg in data:
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
 	response_data['pie'] = new_data
-	#PI chart segment revenue
+
+	#Pie Chart Segment Revenue
 	pipeline = [
 		{'$match': queryDict},
 		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
@@ -760,6 +758,7 @@ def getSummary():
 	data = []
 	for state in col.distinct('stateProvAbb', {'clusterId': clusterId}):
 		queryDict.update({'stateProvAbb': state})
+		# Need to change it over here
 		dt = summaryData(queryDict = queryDict, is_map=True)
 		dt.update({'state':state})
 		data.append(dt)
@@ -779,7 +778,7 @@ def get_cst_by_cluster():
 	queryDict.update({'clusterId': clusterId})
 
 	if payload.get('source', ''):
-		queryDict.update({'source': payload.get('source', '').capitalize()})
+		queryDict.update({'source': payload.get('source', '')})
 
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
@@ -979,7 +978,7 @@ def get_dunsall():
 		globalUltDunsNum = payload['globalUltDunsNum']
 
 		if payload.get('source', ''):
-			queryDict.update({'source': payload.get('source', '').capitalize()})
+			queryDict.update({'source': payload.get('source', '')})
 
 		if payload.get('version', ''):
 			queryDict.update({'version': payload.get('version', '')})
