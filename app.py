@@ -409,7 +409,7 @@ def getClustersInfo():
 
 		listLength = aggregatedResult['count']
 		opDNBNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNameList'])
-		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNumList'])
+		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['cstNameList'])
 		noOfC = len(aggregatedResult['cList'])
 		revenue = aggregatedResult['revenue']
 		
@@ -436,7 +436,7 @@ def getClustersInfo():
 		# if len(opDNBNumList)>0:
 		# 	score = 100.0/len(list(set(opDNBNumList)))
 		if clusterName == "":
-			clusterName = "" #getMostFrequentWord(opNameList)
+			clusterName = getMostFrequentWord(opNameList)
 		clusterSize = listLength
 		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
