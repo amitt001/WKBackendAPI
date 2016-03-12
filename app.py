@@ -346,6 +346,7 @@ def getMostFrequentWordOld(resultList):
 @cross_origin()
 def getClustersInfo():
 	payload = ast.literal_eval(request.data)
+	# payload = {"source":"All Merged","version":"1.0"}
 	source = payload['source']
 	version = payload['version']
 	queryDict = {"source":source,"version":version}
@@ -378,11 +379,12 @@ def getClustersInfo():
 			minRange = int(clusterRange.split("+")[0])
 			pipeline.append({"$match":{"count":{"$gte":minRange}}})
 
-	pipeline.extend([{"$sort":{"count":-1}},{"$limit":200 }])
+	pipeline.extend([{"$sort":{"count":-1}},{"$limit":250}])
 	
 	clusterCount = db.LinkageOp1.aggregate(pipeline)
 	idCount = 0
 	for doc in clusterCount:
+		clusterName = ""
 		score = 0.0
 		currentDocId = doc["_id"]
 		idCount = idCount + 1
@@ -392,26 +394,29 @@ def getClustersInfo():
 		opDNBNameDict = {}
 		revenue = 0
 		noOfC = 0
-		# Getting single CST as clusterElement in this loop
-		for clusterElement in db.LinkageOp1.find({"source":source, "version":version, "clusterId":currentDocId}):
-			if 'revenue' in clusterElement and clusterElement['revenue'] is not None:
-				revenue += clusterElement['revenue']
 
-			if 'customer' in clusterElement and clusterElement['customer'] is not None:
-				noOfC += len(clusterElement['customer'])
+		# We are doing it by aggregate - so it will take less time to show up
+		aggregatedResult = list(db.LinkageOp1.aggregate([
+			{"$match":{"source":source,"version":version,"clusterId":currentDocId}},
+			{"$group":{"_id":"$clusterId",
+			"revenue":{"$sum":"$revenue"},
+			"count":{"$sum":"1"},
+			"cList" : {"$addToSet":"$customer.cNum"},
+			"cstNameList":{"$push":"$cstName"},
+			"dnbNameList":{"$push":"$globalUltDunsName"},
+			"dnbNumList":{"$push":"$globalUltDunsNum"}}}
+		]))[0]
 
-			opNameList.append(clusterElement['cstName'])
-			if 'globalUltDunsName' in clusterElement:
-				if clusterElement['globalUltDunsName'] is not None and clusterElement['globalUltDunsName'] != "" and clusterElement['globalUltDunsName'] != "Unknown":
-					opDNBNameList.append(clusterElement['globalUltDunsName'])
-					if clusterElement['globalUltDunsName'] not in opDNBNameDict:
-						opDNBNameDict[clusterElement['globalUltDunsName']] = 0
-					opDNBNameDict[clusterElement['globalUltDunsName']] += 1
+		listLength = aggregatedResult['count']
+		opDNBNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNameList'])
+		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['cstNameList'])
+		noOfC = len(aggregatedResult['cList'])
 
-			if 'globalUltDunsNum' in clusterElement:
-				if clusterElement['globalUltDunsNum'] is not None and clusterElement['globalUltDunsNum'] != "":
-					opDNBNumList.append(clusterElement['globalUltDunsNum'])
-		
+		for nameDnB in opDNBNameList:
+			if nameDnB not in opDNBNameDict:
+				opDNBNameDict[nameDnB] = 0
+			opDNBNameDict[nameDnB] += 1
+
 		if len(opDNBNameList)>0:
 			if len(list(set(opDNBNameList))) == 1:
 				clusterName = opDNBNameList[0]
@@ -426,14 +431,12 @@ def getClustersInfo():
 		else:
 			clusterName = ""
 
-		if len(opDNBNumList)>0:
-			score = 100.0/len(list(set(opDNBNumList)))
-
-		listLength = len(opNameList)
+		# if len(opDNBNumList)>0:
+		# 	score = 100.0/len(list(set(opDNBNumList)))
 		if clusterName == "":
-			clusterName = getMostFrequentWord(opNameList)
+			clusterName = "" #getMostFrequentWord(opNameList)
 		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"score" : score,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
+		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
