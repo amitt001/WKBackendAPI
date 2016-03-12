@@ -409,8 +409,10 @@ def getClustersInfo():
 
 		listLength = aggregatedResult['count']
 		opDNBNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNameList'])
-		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['cstNameList'])
+		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNumList'])
 		noOfC = len(aggregatedResult['cList'])
+		revenue = aggregatedResult['revenue']
+		
 
 		for nameDnB in opDNBNameList:
 			if nameDnB not in opDNBNameDict:
