@@ -248,6 +248,7 @@ def getClustersInfo():
 			{"$match":{"source":source,"version":version,"clusterId":currentDocId}},
 			{"$group":{"_id":"$clusterId",
 			"revenue":{"$sum":"$revenue"},
+			"revenue2015":{"$sum":"$revenue2015"},
 			"count":{"$sum":1},
 			"cList" : {"$addToSet":"$customer.cNum"},
 			"cstNameList":{"$push":"$cstName"},
@@ -260,7 +261,7 @@ def getClustersInfo():
 		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['cstNameList'])
 		noOfC = len(aggregatedResult['cList'])
 		revenue = aggregatedResult['revenue']
-		
+		revenue2015 = aggregatedResult['revenue2015']
 
 		for nameDnB in opDNBNameList:
 			if nameDnB not in opDNBNameDict:
@@ -280,12 +281,12 @@ def getClustersInfo():
 						clusterName = maxKey
 		else:
 			clusterName = ''
-		
+
 		if clusterName == '':
 			clusterName = getMostFrequentWord(opNameList)
 
 		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
+		singleCluster = {"name" : clusterName,"revenue":revenue,"revenue2015":revenue2015,"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
@@ -452,30 +453,20 @@ def getClustersList():
 		noOfC = 0
 		if 'customer' in doc and doc['customer'] is not None:
 			noOfC = len(doc['customer'])
-		revenue = ""
-		if 'revenue' in doc:
-			revenue = doc['revenue']
 
-		#To get city 
-		try:
-			#if customer
-			cstCity = doc.get('customer', [{}])[0].get('cCity', '') 
-			#if no customer
-			if not cstCity:
-				if doc.get('stateProvAbb', ''):
-					indx = doc.get('address', '').split(',').index(doc['stateProvAbb'])
-					cstCity = doc.get('address', '').split(',')[indx-1]
-				else:
-					cstCity = ''
-		except Exception as err:
-			cstCity = ''
-
-		singleCstData = {"cstName":doc['cstName'],"globalUltDunsNum":doc['globalUltDunsNum'],
-						"cstNum":doc['cstNum'],"globalUltDunsName":doc['globalUltDunsName'],
-						"revenue":revenue,
+		singleCstData = {
+						"cstName":doc['cstName'],
+						"globalUltDunsNum":doc['globalUltDunsNum'],
+						"cstNum":doc['cstNum'],
+						"globalUltDunsName":doc['globalUltDunsName'],
+						"dunsNum":doc["dunsNum"],
+						"dunsName":doc["dunsName"],
+						"revenue":doc['revenue'],
+						"revenue2015":doc['revenue2015'],
 						"noOfC":noOfC,
-						"cstState": doc.get('stateProvAbb', ''),
-						"cstCity": cstCity
+						"cstState": doc['stateProvAbb'],
+						"cstCity": doc['cstCity'],
+						"segment":doc['segment']
 						}
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
