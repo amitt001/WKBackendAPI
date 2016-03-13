@@ -149,7 +149,6 @@ def getSampleRowsResult():
 	return jsonify({'data': r.json()})
 
 # Added code for Linkage
-
 def ngram(sentence,n):
 	sentence = sentence.lower()
 	sentence = re.sub('[^0-9a-zA-Z]+', ' ', sentence)
@@ -195,152 +194,6 @@ def getMostFrequentWord(resultList):
 			return word_and_count[0].strip().title()
 	return most_frequent_words_list[0][0].strip().title()
 
-
-def getMostFrequentWordOld3(resultList):
-	duns_number_list = []
-	duns_number_dict = {}
-	for result in resultList:
-		if " :: " not in result:
-			break
-		duns_number = result.split(" :: ")[1]
-		duns_name = duns_number.split(" : ")[0].strip()
-		if duns_name=="":
-			continue
-
-		if duns_name not in duns_number_dict:
-			duns_number_dict[duns_name] = 0
-		duns_number_dict[duns_name] += 1
-		duns_number_list.append(duns_name)
-
-	duns_name_number = list(set(duns_number_list))
-
-	# if it breaks it will not have any element in it
-	if len(duns_name_number)==1:
-		dunsTempName = duns_name_number[0].title()
-		if dunsTempName!="":
-			return dunsTempName
-
-	# rule for greater than 70% check over here
-	totalLengthValues = sum(duns_number_dict.values())
-	if totalLengthValues > 0:
-		maxKey = max(duns_number_dict, key=duns_number_dict.get)
-		maxValue = duns_number_dict[maxKey]
-
-		if maxValue*1.0/totalLengthValues>0.7:
-			return maxKey.title()
-
-	# Normal flow of it
-	listLength = len(resultList)
-	most_frequent_words = ""
-	opResultFinal = []
-	for resultWord in resultList:
-		if " - " in resultWord:
-			result = resultWord.split(" - ")[0]
-		else:
-			result = resultWord
-		ngram1 = ngram(result,1) #[::-1]
-		ngram2 = ngram(result,2) #[::-1]
-		ngram3 = ngram(result,3) #[::-1]
-		ngram4 = ngram(result,4) #[::-1]
-		ngram5 = ngram(result,5) #[::-1]
-		opResultFinal.extend(ngram1)
-		opResultFinal.extend(ngram2)
-		opResultFinal.extend(ngram3)
-		opResultFinal.extend(ngram4)
-		opResultFinal.extend(ngram5)
-
-	opWordCount = {}
-	for element in opResultFinal:
-		if element not in opWordCount:
-			opWordCount[element] = 1
-		else:
-			opWordCount[element] = opWordCount[element] + 1
-
-	most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-	for word_and_count in most_frequent_words_list:
-		if word_and_count[1]*1.0/listLength>.8:
-			return word_and_count[0].strip().title()
-	return most_frequent_words_list[0][0].strip().title()
-
-
-
-def getMostFrequentWordOld2(resultList):
-	duns_number_list = []
-	for result in resultList:
-		if " :: " not in result:
-			break
-		duns_number = result.split(" :: ")[1]
-		duns_number_list.append(duns_number)
-	duns_name_number = list(set(duns_number_list))
-
-	if len(duns_name_number)==1:
-		return duns_name_number[0].split(":")[0].strip().title()
-
-	listLength = len(resultList)
-	most_frequent_words = ""
-	opResultFinal = []
-	for resultWord in resultList:
-		if " - " in resultWord:
-			result = resultWord.split(" - ")[0]
-		else:
-			result = resultWord
-		ngram1 = ngram(result,1) #[::-1]
-		ngram2 = ngram(result,2) #[::-1]
-		ngram3 = ngram(result,3) #[::-1]
-		ngram4 = ngram(result,4) #[::-1]
-		ngram5 = ngram(result,5) #[::-1]
-		opResultFinal.extend(ngram1)
-		opResultFinal.extend(ngram2)
-		opResultFinal.extend(ngram3)
-		opResultFinal.extend(ngram4)
-		opResultFinal.extend(ngram5)
-
-	opWordCount = {}
-	for element in opResultFinal:
-		if element not in opWordCount:
-			opWordCount[element] = 1
-		else:
-			opWordCount[element] = opWordCount[element] + 1
-
-	most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-	for word_and_count in most_frequent_words_list:
-		if word_and_count[1]*1.0/listLength>.8:
-			return word_and_count[0].strip().title()
-	return most_frequent_words_list[0][0].strip().title()
-
-
-def getMostFrequentWordOld(resultList):
-	listLength = len(resultList)
-	most_frequent_words = ""
-	opResultFinal = []
-	for resultWord in resultList:
-		if " - " in resultWord:
-			result = resultWord.split(" - ")[0]
-		else:
-			result = resultWord
-		ngram1 = ngram(result,1) #[::-1]
-		ngram2 = ngram(result,2) #[::-1]
-		ngram3 = ngram(result,3) #[::-1]
-		ngram4 = ngram(result,4) #[::-1]
-		ngram5 = ngram(result,5) #[::-1]
-		opResultFinal.extend(ngram1)
-		opResultFinal.extend(ngram2)
-		opResultFinal.extend(ngram3)
-		opResultFinal.extend(ngram4)
-		opResultFinal.extend(ngram5)
-
-	opWordCount = {}
-	for element in opResultFinal:
-		if element not in opWordCount:
-			opWordCount[element] = 1
-		else:
-			opWordCount[element] = opWordCount[element] + 1
-
-	most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-	for word_and_count in most_frequent_words_list:
-		if word_and_count[1]*1.0/listLength>.8:
-			return word_and_count[0].strip().title()
-	return most_frequent_words_list[0][0].strip().title()
 
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
 @cross_origin()
@@ -431,12 +284,8 @@ def getClustersInfo():
 					if maxValue*1.0/totalLengthValues>0.7:
 						clusterName = maxKey
 		else:
-			clusterName = ""
-
-		# if len(opDNBNumList)>0:
-		# 	score = 100.0/len(list(set(opDNBNumList)))
-		if clusterName == "":
 			clusterName = getMostFrequentWord(opNameList)
+			
 		clusterSize = listLength
 		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
