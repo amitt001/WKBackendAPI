@@ -204,12 +204,6 @@ def getClustersInfo():
 	version = payload['version']
 	queryDict = {"source":source,"version":version}
 
-	if payload.get('segment'):
-		if payload['segment'].lower() == 'misc':
-			queryDict.update({'segment': {'$in': [None, '', 'Do Not Use']}})
-		else:
-			queryDict.update({'segment': payload['segment']})
-
 	opData = {"name" : "bubble","children" : []}
 
 	# Added search functionality in cluster
@@ -246,6 +240,7 @@ def getClustersInfo():
 		opDNBNumList = []
 		opDNBNameDict = {}
 		revenue = 0
+		revenueAll = 0
 		noOfC = 0
 
 		# We are doing it by aggregate - so it will take less time to show up
@@ -284,8 +279,11 @@ def getClustersInfo():
 					if maxValue*1.0/totalLengthValues>0.7:
 						clusterName = maxKey
 		else:
+			clusterName = ''
+		
+		if clusterName == '':
 			clusterName = getMostFrequentWord(opNameList)
-			
+
 		clusterSize = listLength
 		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
 		opData["children"].append(singleCluster)
