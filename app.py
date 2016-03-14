@@ -579,7 +579,7 @@ def getClusterTablesInfo():
 		misc_list = [None, '', 'Do Not Use']
 		col = db.LinkageOp1
 		opData = {}
-		for source in db.Linkage.distinct("source"):
+		for source in col.distinct("source"):
 			opData[source] = col.find({"source":source}).distinct("version")
 			#data = {}
 			#for version in col.find({"source":source}).distinct("version"):
