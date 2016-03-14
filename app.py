@@ -253,7 +253,9 @@ def getClustersInfo():
 			"cList" : {"$addToSet":"$customer.cNum"},
 			"cstNameList":{"$push":"$cstName"},
 			"dnbNameList":{"$push":"$globalUltDunsName"},
-			"dnbNumList":{"$push":"$globalUltDunsNum"}}}
+			"dnbNumList":{"$push":"$globalUltDunsNum"}}},
+			"validationDate":{"$first":"$validationDate"},
+			"isVerified":{"$first":"$isVerified"}
 		]))[0]
 
 		listLength = aggregatedResult['count']
