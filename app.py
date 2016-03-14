@@ -269,6 +269,8 @@ def getClustersInfo():
 		noOfC = len(aggregatedResult['cList'])
 		revenue = aggregatedResult['revenue']
 		revenue2015 = aggregatedResult['revenue2015']
+		isVerified = aggregatedResult['isVerified']
+		validationDate = aggregatedResult['validationDate']
 
 		for nameDnB in opDNBNameList:
 			if nameDnB not in opDNBNameDict:
