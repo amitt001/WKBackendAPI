@@ -293,7 +293,9 @@ def getClustersInfo():
 			clusterName = getMostFrequentWord(opNameList)
 
 		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"revenue":revenue,"revenue2015":revenue2015,"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
+		singleCluster = {"name" : clusterName,"revenue":revenue,"revenue2015":revenue2015,
+		"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,
+		"value" : clusterSize,"id" : currentDocId,"validationDate":validationDate,"isVerified":isVerified}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
