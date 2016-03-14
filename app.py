@@ -246,16 +246,21 @@ def getClustersInfo():
 		# We are doing it by aggregate - so it will take less time to show up
 		aggregatedResult = list(db.LinkageOp1.aggregate([
 			{"$match":{"source":source,"version":version,"clusterId":currentDocId}},
-			{"$group":{"_id":"$clusterId",
-			"revenue":{"$sum":"$revenue"},
-			"revenue2015":{"$sum":"$revenue2015"},
-			"count":{"$sum":1},
-			"cList" : {"$addToSet":"$customer.cNum"},
-			"cstNameList":{"$push":"$cstName"},
-			"dnbNameList":{"$push":"$globalUltDunsName"},
-			"dnbNumList":{"$push":"$globalUltDunsNum"}}},
-			"validationDate":{"$first":"$validationDate"},
-			"isVerified":{"$first":"$isVerified"}
+			{
+				"$group":
+				{	
+					"_id":"$clusterId",
+					"revenue":{"$sum":"$revenue"},
+					"revenue2015":{"$sum":"$revenue2015"},
+					"count":{"$sum":1},
+					"cList" : {"$addToSet":"$customer.cNum"},
+					"cstNameList":{"$push":"$cstName"},
+					"dnbNameList":{"$push":"$globalUltDunsName"},
+					"dnbNumList":{"$push":"$globalUltDunsNum"},
+					"validationDate":{"$first":"$validationDate"},
+					"isVerified":{"$first":"$isVerified"}
+				}
+			}
 		]))[0]
 
 		listLength = aggregatedResult['count']
