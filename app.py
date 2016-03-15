@@ -622,7 +622,7 @@ def ctBusinessLocation():
 	queryDict = {}
 	# payload = json.loads(ast.literal_eval(request.data)['data'])
 	payload = ast.literal_eval(request.data)
-	clusterId = payload['clustId']
+	clusterId = payload['clusterId']
 
 	queryDict.update({'clusterId': clusterId})
 
