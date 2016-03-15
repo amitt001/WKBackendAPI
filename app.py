@@ -494,15 +494,15 @@ def summaryData(queryDict, **kwargs):
 	clusterData = {}
 	print queryDict
 	try:
-		#db = MongoClient().testdb.testcol
+		# db = MongoClient().testdb.testcol
 		col = db.LinkageOp1
-		#cst count
+		# cst count
 		clusterData['noOfCSTs'] = col.count(queryDict)
-		#Duplicate
+		# duplicate
 		clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
 										 len(list(col.aggregate([{
 										'$match': queryDict}, 
-										{'$group': {'_id': 'cstNum',
+										{'$group': {'_id': '$cstNum',
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
 		#c count
@@ -517,8 +517,8 @@ def summaryData(queryDict, **kwargs):
 		clusterData['noOfCDups'] = (clusterData['noOfCs']-
 										len(list(col.aggregate([
 											{'$match': queryDict},
-											{'$group': {'_id': 'customer.cName', 'items':
-											{'$addToSet': "$customer.cName"}}}]))[0]['items']))
+											{'$group': {'_id': '$customer.$cName', 'items':
+											{'$addToSet': "$customer.$cName"}}}]))[0]['items']))
 												
 		clusterData['revenue'] = list(col.aggregate([
 								{'$match': queryDict}, 
