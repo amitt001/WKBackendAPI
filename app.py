@@ -888,30 +888,32 @@ def search():
 		payload = ast.literal_eval(request.data)
 
 		searchTerm = payload['searchTerm']
-		queryDict = {'clusterName': {'$regex' : searchTerm ,'$options':'i'}}
+		source = payload['source']
+		version = payload['version']
+		# queryDict = {'clusterName': {'$regex' : searchTerm ,'$options':'i'}}
 
-		if payload.get('source'):
-			queryDict['source'] = payload['source']
-		if payload.get('version'):
-			queryDict['version'] = payload['version']
+		# if payload.get('source'):
+		# 	queryDict['source'] = payload['source']
+		# if payload.get('version'):
+		# 	queryDict['version'] = payload['version']
 
-		response_data = []
-		datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1},limit=200))
-		cids = {}
-		for data in datas:
-			if cids.get(data['clusterId']):
-				continue
-			response_data.append(data)
-			cids[data['clusterId']] = True
+		# response_data = []
+		# datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1},limit=200))
+		# cids = {}
+		# for data in datas:
+		# 	if cids.get(data['clusterId']):
+		# 		continue
+		# 	response_data.append(data)
+		# 	cids[data['clusterId']] = True
 
-		if len(response_data) > 15:
-			response_data = response_data[:15]
-		# response_data = list(collection.aggregate([
-		# 	{"$match":{"source":source,"version":version,"clusterName":{"$regex":searchTerm,'$options':'i'}}},
-		# 	{"$group":{"_id":"$clusterId","isVerified":{"$first":"$isVerified"},"clusterId":{"$first":"$clusterId"},"clusterName":{"$first":"$clusterName"},"count":{"$sum":1}}},
-		# 	{"$sort":{"count":-1}},
-		# 	{"$limit":20}]
-		# 	))
+		# if len(response_data) > 15:
+		# 	response_data = response_data[:15]
+		response_data = list(collection.aggregate([
+			{"$match":{"source":source,"version":version,"clusterName":{"$regex":searchTerm,'$options':'i'}}},
+			{"$group":{"_id":"$clusterId","isVerified":{"$first":"$isVerified"},"clusterId":{"$first":"$clusterId"},"clusterName":{"$first":"$clusterName"},"count":{"$sum":1}}},
+			{"$sort":{"count":-1}},
+			{"$limit":20}]
+			))
 
 	except Exception as err:
 		import traceback
