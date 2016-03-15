@@ -15,8 +15,8 @@ app = Flask(__name__)
 cors = CORS(app)
 
 #Creating dependency objects
-# client = MongoClient(host="172.16.248.156")
-client = MongoClient()
+client = MongoClient(host="172.16.248.156")
+# client = MongoClient()
 db = client.WK
 
 
@@ -582,6 +582,7 @@ def getSummary():
 	payload = ast.literal_eval(request.data)
 	# We require these 3 data as it is not optional
 	# We can pass a message to API if these call is not valid
+
 	clusterId = payload['clustId']
 	queryDict.update({'clusterId': clusterId})
 
@@ -591,20 +592,18 @@ def getSummary():
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
 
-	data = summaryData(queryDict = queryDict)
+	data = summaryData(queryDict = queryDict)	
 	response_data['summary'] = data
 
-	#db = MongoClient().testdb.testcol
 	col = db.LinkageOp1
+	clusterName = col.find_one(queryDict)['clusterName']
 
-	# Getting search term from the data
-	clusterName = col.find(queryDict, {'_id':0, 'clusterName':1})[0]
 	cleanClusterName = getCleanClusterName(clusterName)
 
 	names = map(lambda x: x['cstName'], list(col.find(queryDict, {'cstName':1,'_id':0})))
 	frequentName = getMostFrequentWord(names)
 
-	response_data['searchTerm'] = '"' + searchTerm + '"' + ' ' + '"' + names + '"'
+	response_data['searchTerm'] = '"' + cleanClusterName + '"' + ' ' + '"' + frequentName + '"'
 
 	#FOR Pie CHART By Segment
 	pipeline = [
