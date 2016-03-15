@@ -799,7 +799,6 @@ def ctLegalEntities():
 			response_data = []
 	return jsonify({'data': response_data})
 
-
 @app.route('/cluster/merge', methods=['POST'])
 @cross_origin()
 def merge():
@@ -810,33 +809,74 @@ def merge():
 		csts = payload['cstList']
 		source = payload['source']
 		version = payload['version']
-
 		clusterName = payload.get('clusterName', '')
 		clusterId = payload.get('clusterId', '')
 
-		# For orphans
+		if isinstance(payload, str):
+			clusts = list(payload)
+
 		if not clusterId:
-			clusterId = 'ORP' + '%.0f' % time.time()
+			import time
+			clusterId = 'OBR' + '%.0f' % time.time()
 
 		#update data
 		updateDict = {'clusterId': clusterId}
 		if clusterName:
 			updateDict.update({'clusterName': clusterName})
 
-		if isinstance(clusts, str):
-			clusts = list(clusts)
-
-		queryDict = {"source":source,"version":version,'cstNum':{'$in': csts}}
+		queryDict = {'cstNum':{'$in': csts}, 'source': source, 'version': version}
 
 		cstData = col.find(queryDict)
+
 		for data in cstData:
 			col.update_many(queryDict,{'$set': updateDict})
 		response = {'response' : 'ok'}
 
 	except Exception as err:
-		print(format_exc())
+		import traceback
+		print(traceback.format_exc())
 		response = {'response': 'err'}
 	return jsonify({'data': response})
+
+
+
+# @app.route('/cluster/merge', methods=['POST'])
+# @cross_origin()
+# def merge():
+# 	response = {}
+# 	try:
+# 		col = db.LinkageOp1
+# 		payload = ast.literal_eval(request.data)
+# 		csts = payload['cstList']
+# 		source = payload['source']
+# 		version = payload['version']
+
+# 		clusterName = payload.get('clusterName', '')
+# 		clusterId = payload.get('clusterId', '')
+
+# 		# For orphans
+# 		if not clusterId:
+# 			clusterId = 'ORP' + '%.0f' % time.time()
+
+# 		#update data
+# 		updateDict = {'clusterId': clusterId}
+# 		if clusterName:
+# 			updateDict.update({'clusterName': clusterName})
+
+# 		if isinstance(clusts, str):
+# 			clusts = list(clusts)
+
+# 		queryDict = {"source":source,"version":version,'cstNum':{'$in': csts}}
+
+# 		cstData = col.find(queryDict)
+# 		for data in cstData:
+# 			col.update_many(queryDict,{'$set': updateDict})
+# 		response = {'response' : 'ok'}
+
+# 	except Exception as err:
+# 		print(format_exc())
+# 		response = {'response': 'err'}
+# 	return jsonify({'data': response})
 
 
 @app.route('/logo/search', methods=['POST'])
