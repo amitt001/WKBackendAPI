@@ -908,7 +908,7 @@ def search():
 
 		# if len(response_data) > 15:
 		# 	response_data = response_data[:15]
-		response_data = list(collection.aggregate([
+		response_data = list(col.aggregate([
 			{"$match":{"source":source,"version":version,"clusterName":{"$regex":searchTerm,'$options':'i'}}},
 			{"$group":{"_id":"$clusterId","isVerified":{"$first":"$isVerified"},"clusterId":{"$first":"$clusterId"},"clusterName":{"$first":"$clusterName"},"count":{"$sum":1}}},
 			{"$sort":{"count":-1}},
