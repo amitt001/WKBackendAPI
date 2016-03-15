@@ -799,6 +799,80 @@ def ctLegalEntities():
 			response_data = []
 	return jsonify({'data': response_data})
 
+
+@app.route('/cluster/merge', methods=['POST'])
+@cross_origin()
+def merge():
+	response = {}
+	try:
+		col = db.LinkageOp1
+		payload = ast.literal_eval(request.data)
+		csts = payload['cstList']
+		source = payload['source']
+		version = payload['version']
+
+		clusterName = payload.get('clusterName', '')
+		clusterId = payload.get('clusterId', '')
+
+		# For orphans
+		if not clusterId:
+			clusterId = 'ORP' + '%.0f' % time.time()
+
+		#update data
+		updateDict = {'clusterId': clusterId}
+		if clusterName:
+			updateDict.update({'clusterName': clusterName})
+
+		if isinstance(clusts, str):
+			clusts = list(clusts)
+
+		queryDict = {"source":source,"version":version,'cstNum':{'$in': csts}}
+
+		cstData = col.find(queryDict)
+		for data in cstData:
+			col.update_many(queryDict,{'$set': updateDict})
+		response = {'response' : 'ok'}
+
+	except Exception as err:
+		print(format_exc())
+		response = {'response': 'err'}
+	return jsonify({'data': response})
+
+
+@app.route('/logo/search', methods=['POST'])
+@cross_origin()
+def search():
+	try:
+		col = db.LinkageOp1
+
+		payload = ast.literal_eval(request.data)
+
+		searchTerm = payload['searchTerm']
+		queryDict = {'clusterName': {'$regex' : searchTerm ,'$options':'i'}}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = []
+		datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1},limit=200))
+		cids = {}
+		for data in datas:
+			if cids.get(data['clusterId']):
+				continue
+			response_data.append(data)
+			cids[data['clusterId']] = True
+
+		if len(response_data) > 15:
+			response_data = response_data[:15]
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+
+	return jsonify({'data': response_data})
 # @app.route('/merge', methods=['POST'])
 # @cross_origin()
 # def merge():
