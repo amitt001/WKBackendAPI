@@ -740,7 +740,7 @@ def cRecord():
 	return jsonify({'data': response_data})
 
 
-@app.route('/ctlegalentity', methods=['POST'])
+@app.route('/logo/ctlegalentity', methods=['POST'])
 @cross_origin()
 def ctLegalEntities():
 	try:
