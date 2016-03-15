@@ -753,12 +753,13 @@ def getSummary():
 	data = summaryData(queryDict = queryDict)
 	response_data['summary'] = data
 
-	searchTerm = foo(source=queryDict.get('source'), 
-					version=queryDict.get('version'),
-					clusterId = queryDict['clusterId'])
+	#get clusterName from linkage
+	searchTerm = col.find(queryDict, {'_id':0, 'clusterName':1})[0]
 
-	mapper = list(colMap.find({'suffixKey': " " + searchTerm.upper() + " ", },{'suffixValue':1, '_id': 0}))
-	
+	#get suffixValue from Mapping using suffixKey
+	mapper = colMap.find({'suffixKey': " " + searchTerm.upper() + " ", },{'suffixValue':1, '_id': 0})
+
+	#if found in mapper get set suffixvaue as searchterm
 	searchTerm = "" if not mapper else mapper[0]['suffixValue']
 
 	if searchTerm and list(colMap.find({'suffix': searchTerm})):
@@ -768,6 +769,7 @@ def getSummary():
 	names = getMostFrequentWord(names)
 
 	response_data['searchTerm'] = '"' + searchTerm + '"' + ' ' + '"' + names + '"'
+
 	#FOR PI CHART By Segment
 	pipeline = [
 		{'$match': queryDict},
@@ -856,6 +858,9 @@ def merge():
 		clusterName = payload.get('clusterName', '')
 		clusterId = payload.get('clusterId', '')
 
+		if isinstance(payload, str):
+			clusts = list(payload)
+			
 		if not clusterId:
 			clusterId = 'SPL' + '%.0f' % time.time()
 
@@ -863,9 +868,6 @@ def merge():
 		updateDict = {'clusterId': clusterId}
 		if clusterName:
 			updateDict.update({'clusterName': clusterName})
-
-		if isinstance(clusts, str):
-			clusts = list(clusts)
 
 		queryDict = {'cstNum':{'$in': csts}}
 
@@ -875,7 +877,8 @@ def merge():
 		response = {'response' : 'ok'}
 
 	except Exception as err:
-		print(format_exc())
+		import traceback
+		print(traceback.format_exc())
 		response = {'response': 'err'}
 	return jsonify({'data': response})
 
@@ -1249,7 +1252,7 @@ def search():
 		payload = ast.literal_eval(request.data)
 
 		searchTerm = payload['searchTerm']
-		queryDict = {'clusterName': {'$regex' : searchTerm }}
+		queryDict = {'clusterName': {'$regex' : searchTerm, '$options':'i' }}
 
 		if payload.get('source'):
 			queryDict['source'] = payload['source']
@@ -1257,15 +1260,16 @@ def search():
 			queryDict['version'] = payload['version']
 
 		response_data = []
-		datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1}))
+		datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1}, limit=100))
 		cids = {}
 		for data in datas:
 			if cids.get(data['clusterId']):
 				continue
 			response_data.append(data)
+			cids[data['clusterId']] = True
 
-		if len(response_data) > 10:
-			response_data = response_data[:10]
+		if len(response_data) > 15:
+			response_data = response_data[:15]
 
 	except Exception as err:
 		import traceback
