@@ -585,9 +585,9 @@ def getClusterTablesInfo():
 			#for version in col.find({"source":source}).distinct("version"):
 				#data['version'] = version
 				#s = set(map(
-				#	lambda x: x['segment'], col.find({
-				#	"source":source, 
-				#	"version": version}, {'_id':0, 'segment':1})))
+				#   lambda x: x['segment'], col.find({
+				#   "source":source, 
+				#   "version": version}, {'_id':0, 'segment':1})))
 				#s = list(set([i if not i in misc_list else 'Misc' for i in s]))
 				#data['segment'] = s
 				#opData[source].append(data)
@@ -684,9 +684,22 @@ def summaryData(queryDict, **kwargs):
 											lambda x:int(x['yr3BaseSaleAmt']), 
 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
 
+		custData = list(col.aggregate([{
+								'$match': queryDict},{
+								'$unwind': "$customer"},{
+								'$group':{'_id':'', 'cEmail':{
+									'$addToSet': '$customer.cEmail'}, 
+									'cPhone':{'$addToSet': '$customer.cPhone'}, 
+									'cAddress':{'$addToSet':'$customer.cAddress'}}}]))[0]
+
+		for itm in ['cEmail', 'cAddress', 'cPhone']:
+			clusterData['noOf'+itm.lstrip('c')] = len(
+				filter(lambda x:x, custData[itm]))
+		"""
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
 			clusterData['noOf'+itm.lstrip('c')] = len(
 				filter(lambda x: x, col.distinct('customer.'+itm, queryDict)))
+		"""
 		#clusterData['addresses'] = len(
 		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
 	except IndexError as err:
@@ -732,38 +745,62 @@ def getSummary():
 
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
-	print payload
+	
+	col = db.LinkageOp1
+	colMap = db.Mapping
+
 	#FOR SUMMARY
 	data = summaryData(queryDict = queryDict)
 	response_data['summary'] = data
 
-	#db = MongoClient().testdb.testcol
-	col = db.LinkageOp1
+	searchTerm = foo(source=queryDict.get('source'), 
+					version=queryDict.get('version'),
+					clusterId = queryDict['clusterId'])
 
+	mapper = list(colMap.find({'suffixKey': " " + searchTerm.upper() + " ", },{'suffixValue':1, '_id': 0}))
+	
+	searchTerm = "" if not mapper else mapper[0]['suffixValue']
+
+	if searchTerm and list(colMap.find({'suffix': searchTerm})):
+		searchTerm = ""
+
+	names = map(lambda x: x['cstName'], list(col.find(queryDict, {'cstName':1,'_id':0})))
+	names = getMostFrequentWord(names)
+
+	response_data['searchTerm'] = '"' + searchTerm + '"' + ' ' + '"' + names + '"'
 	#FOR PI CHART By Segment
 	pipeline = [
 		{'$match': queryDict},
-		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
+		{'$group': {'_id': '$segment', 'count': {'$sum':1}, 'revenue': {'$sum': '$revenue'}}}]
 	data = list(col.aggregate(pipeline))
-	new_data = []
+
+	new_data = {}
 	for sg in data:
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
-		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+		new_data[sg['_id']] = {}
+		new_data[sg['_id']]['segment'] = new_data.get(sg['_id'], {}).get('segment', 0) + sg['count']
+		new_data[sg['_id']]['revenue'] = new_data.get(sg['_id'], {}).get('revenue', 0) + sg['revenue']
 	response_data['pie'] = new_data
+
 	#PI chart segment revenue
 	pipeline = [
 		{'$match': queryDict},
 		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
 	data = list(col.aggregate(pipeline))
-	new_data = []
+
+	"""
+	new_data = {}
 	for sg in data:
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+
 	response_data['pieRev'] = new_data
+	"""
 
 	#FOR MAP SUMMARY
 	data = []
-	for state in col.distinct('stateProvAbb', {'clusterId': clusterId}):
+	states = col.distinct('stateProvAbb', {'clusterId': clusterId})
+	for state in states:
 		queryDict.update({'stateProvAbb': state})
 		dt = summaryData(queryDict = queryDict, is_map=True)
 		dt.update({'state':state})
@@ -807,6 +844,43 @@ def get_cst_by_cluster():
 		response_data.append(cst)
 	return jsonify({'data': response_data})
 
+
+@app.route('/cluster/merge', methods=['POST'])
+@cross_origin()
+def merge():
+	response = {}
+	try:
+		col = db.LinkageOp1
+		payload = ast.literal_eval(request.data)
+		csts = payload['cstList']
+		clusterName = payload.get('clusterName', '')
+		clusterId = payload.get('clusterId', '')
+
+		if not clusterId:
+			clusterId = 'SPL' + '%.0f' % time.time()
+
+		#update data
+		updateDict = {'clusterId': clusterId}
+		if clusterName:
+			updateDict.update({'clusterName': clusterName})
+
+		if isinstance(clusts, str):
+			clusts = list(clusts)
+
+		queryDict = {'cstNum':{'$in': csts}}
+
+		cstData = col.find(queryDict)
+		for data in cstData:
+			col.update({},{'$set': updateDict})
+		response = {'response' : 'ok'}
+
+	except Exception as err:
+		print(format_exc())
+		response = {'response': 'err'}
+	return jsonify({'data': response})
+
+
+"""
 @app.route('/merge', methods=['POST'])
 @cross_origin()
 def merge():
@@ -894,14 +968,6 @@ def merge():
 @app.route('/split', methods=['POST'])
 @cross_origin()
 def split():
-	"""
-	Split
-	:Parameters:
-	multi: if multi is true
-			split in multiple clusters i.e set multiple clusterId
-		   else
-			split with same clusterID
-	"""
 	try:
 		payload = ast.literal_eval(request.data)
 		csts = payload['cstList']
@@ -946,15 +1012,6 @@ def split():
 				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
 			#clusterid will always be unique
 			#col2.insert({'cstsOld': [cs], 'cstsNew': })
-
-		#REMOVE THIS CODE LATER
-		"""else:
-				clusterId = 'SPL' + '%.0f' % time.time()
-				for e1cid, cs in enumerate(csts):
-					delete.append({'clusterId': clusterId})
-					col.update({'cstNum': cs}, {'$set':
-						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
-		"""
 		
 		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
 
@@ -968,7 +1025,7 @@ def split():
 		response = {}
 
 	return jsonify({'data': response})
-	
+"""	
 	
 @app.route('/logo/dunsall', methods=['POST'])
 @cross_origin()
@@ -1018,6 +1075,196 @@ def get_dunsall():
 		print(traceback.format_exc())
 		response_data = {'response': {}, 'presentin': '','total': ''}
 	return jsonify({'data': response_data})
+
+
+@app.route('/ctlegalentity', methods=['POST'])
+@cross_origin()
+def ctLegalEntities():
+	try:
+		col = db.LinkageOp1
+
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = []
+		for data in col.find(queryDict,{'_id':0}):
+			for c in data['customer']:
+				for le in c['legalEntity']:
+					tmp = {}
+					tmp['entityName'] = le['entityName']
+					tmp['corpNum'] = le['entityNum']
+					tmp['state'] = le.get('stateProvAbb', '')
+					tmp['affNum'] = le['affNum']
+					response_data.append(tmp)
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+	return jsonify({'data': response_data})
+
+@app.route('/ctbusinessloc', methods=['POST'])
+@cross_origin()
+def ctbusinessloc():
+	try:
+		col = db.LinkageOp1
+
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = []
+		for data in col.find(queryDict):
+			tmp = {}
+			tmp['cstNum'] = data['cstNum']
+			tmp['cstName'] = data['cstName']
+			tmp['globalUltDunsName'] = data['globalUltDunsName']
+			tmp['segment'] = data['segment']
+			tmp['revenue'] = data['revenue']
+			#unique domain
+			domains = {}
+			for c in data.get('customer'):
+				email = c['cEmail']
+				if '@' in email:
+					domain = email.split("@")[1].lower()
+					domains[domain] = True
+			tmp['uniqDomains'] = domains.keys()
+			tmp['globalUltDunsNum'] = data['globalUltDunsNum']
+			tmp['yrStarted'] = data['yrStarted']
+			tmp['address'] = data['address']
+			response_data.append(tmp)
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+	return jsonify({'data': response_data})
+
+@app.route('/nonctbusinessloc', methods=['POST'])
+@cross_origin()
+def nonCtBusinessLoc():
+	try:
+		col = db.LinkageOp1
+		colDuns = db.Duns
+
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+		"""
+			cluster
+				all csts
+					get globutldunsnum
+						query Duns table insert all the results into a list
+							remove duns results with duns num in lop table
+		"""
+		response_data = []
+		
+		csts = list(col.find(queryDict))
+		cstDuns = list(set(map(lambda x:x['dunsNum'], csts)))
+		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
+		
+		duns = dict(
+				map(lambda x:(x['dunsNum'], x), 
+					colDuns.find({'globalUltDunsNum': {'$in': glbUltDunsNums}})))
+		#only get those duns which are not present in linkageop1 result
+		filtered_duns = [duns.pop(cd) for cd in cstDuns if duns.get(cd)]
+		#filtered_duns = map(lambda x: not duns.get(x), duns)
+		for data in duns.values():
+			tmp = {}
+			tmp['dunsName'] = data['dunsName']
+			tmp['dunsNum'] = data['dunsNum']
+			tmp['cityName'] = data['cityName']
+			tmp['stateProvAbb'] = data['stateProvAbb']
+			tmp['yr3EmployeeCount'] = data['yr3EmployeeCount']
+			tmp['yr3BaseSaleAmt'] = data['yr3BaseSaleAmt']
+			tmp['globalUltDunsName'] = data['globalUltDunsName']
+			response_data.append(tmp)
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+	return jsonify({'data': response_data})
+
+@app.route('/logo/crecord', methods=['POST'])
+@cross_origin()
+def cRecord():
+	try:
+		col = db.LinkageOp1
+
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = []
+		for data in col.find(queryDict):
+			cdata = data['customer']
+			for cd in cdata:
+				tmp = {}
+				tmp['cstNum'] = data['cstNum']
+				tmp['cstName'] = data['cstName']
+				#customer data
+				tmp['cName'] = cd.get('cName', '')
+				tmp['cCity'] = cd['cCity']
+				tmp['cNum'] = cd['cNum']
+				tmp['cAddress'] = cd['cAddress']
+				tmp['cEmail'] = cd['cEmail']
+				tmp['cPhone'] = cd['cPhone']
+				response_data.append(tmp)
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+	return jsonify({'data': response_data})
+
+
+@app.route('/logo/search', methods=['POST'])
+@cross_origin()
+def search():
+	try:
+		col = db.LinkageOp1
+
+		payload = ast.literal_eval(request.data)
+
+		searchTerm = payload['searchTerm']
+		queryDict = {'clusterName': {'$regex' : clusterId }}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1}))
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+
+	return jsonify({'data': response_data})
+
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
