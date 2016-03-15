@@ -855,25 +855,29 @@ def merge():
 		col = db.LinkageOp1
 		payload = ast.literal_eval(request.data)
 		csts = payload['cstList']
+		source = payload['source']
+		version = payload['version']
 		clusterName = payload.get('clusterName', '')
 		clusterId = payload.get('clusterId', '')
 
 		if isinstance(payload, str):
 			clusts = list(payload)
-			
+
 		if not clusterId:
-			clusterId = 'SPL' + '%.0f' % time.time()
+			import time
+			clusterId = 'OBR' + '%.0f' % time.time()
 
 		#update data
 		updateDict = {'clusterId': clusterId}
 		if clusterName:
 			updateDict.update({'clusterName': clusterName})
 
-		queryDict = {'cstNum':{'$in': csts}}
+		queryDict = {'cstNum':{'$in': csts}, 'source': source, 'version': version}
 
 		cstData = col.find(queryDict)
+
 		for data in cstData:
-			col.update({},{'$set': updateDict})
+			col.update_many(queryDict,{'$set': updateDict})
 		response = {'response' : 'ok'}
 
 	except Exception as err:
