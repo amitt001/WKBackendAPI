@@ -502,7 +502,7 @@ def summaryData(queryDict, **kwargs):
 		clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
 										 len(list(col.aggregate([{
 										'$match': queryDict}, 
-										{'$group': {'_id': '$cstNum',
+										{'$group': {'_id': 'null',
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
 		#c count
@@ -517,7 +517,7 @@ def summaryData(queryDict, **kwargs):
 		clusterData['noOfCDups'] = (clusterData['noOfCs']-
 										len(list(col.aggregate([
 											{'$match': queryDict},
-											{'$group': {'_id': '$customer.cName', 'items':
+											{'$group': {'_id': 'null', 'items':
 											{'$addToSet': "$customer.cName"}}}]))[0]['items']))
 												
 		clusterData['revenue'] = list(col.aggregate([
