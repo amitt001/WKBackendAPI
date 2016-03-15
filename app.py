@@ -518,7 +518,7 @@ def summaryData(queryDict, **kwargs):
 										len(list(col.aggregate([
 											{'$match': queryDict},
 											{'$group': {'_id': 'null', 'items':
-											{'$addToSet': "$customer.cName"}}}]))[0]['items']))
+											{'$addToSet': "$customer.$cName"}}}]))[0]['items']))
 												
 		clusterData['revenue'] = list(col.aggregate([
 								{'$match': queryDict}, 
