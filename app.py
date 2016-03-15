@@ -616,9 +616,9 @@ def getSummary():
 	return jsonify({'data': response_data})
 
 
-@app.route('/logo/allcst', methods=['POST'])
+@app.route('/logo/ctbusinesslocation', methods=['POST'])
 @cross_origin()
-def get_cst_by_cluster():
+def ctBusinessLocation():
 	queryDict = {}
 	# payload = json.loads(ast.literal_eval(request.data)['data'])
 	payload = ast.literal_eval(request.data)
@@ -631,9 +631,10 @@ def get_cst_by_cluster():
 
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
-	print(queryDict)
+
 	col = db.LinkageOp1
 	response_data = []
+
 	for cst in col.find(queryDict, {'customer': 0, '_id':0}):
 		if cst.get('yr3BaseSaleAmt',None) is not None and int(cst['yr3BaseSaleAmt']) == 0:
 			cst['yr3BaseSaleAmt'] = ""
@@ -650,217 +651,339 @@ def get_cst_by_cluster():
 		response_data.append(cst)
 	return jsonify({'data': response_data})
 
-@app.route('/merge', methods=['POST'])
+@app.route('/logo/nonctbusinesslocation', methods=['POST'])
 @cross_origin()
-def merge():
-	response = {}
-
+def nonCtBusinessLoc():
 	try:
-		payload = ast.literal_eval(request.data)
-		clusts = payload['clustIdList']
-
-		if isinstance(clusts, str):
-			clusts = list(clusts)
-
 		col = db.LinkageOp1
-		col2 = db.userCollection
-		
-		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
-		cond = {'clusterId':{'$in': clusts}}
+		colDuns = db.Duns
 
-		cond = {'clusterId':{'$in': clusts}}
-		if payload.get('source'):
-			cond['source'] = payload['source']
-		if payload.get('version'):
-			cond['version'] = payload['version']
-
-		redc = 'function(curr, result) {}'
-		initial = {}
-		data = list(col.group(key, cond, initial, redc))
-
-		allCstNum = map(lambda x: x['cstNum'], data)
-		userColObjId = col2.insert({'csts': allCstNum})
-
-		cid_e1cid = filter(lambda x: x[0], map(
-			lambda x: (x['clusterId'],x['e1ClusterId']), data))
-		#if csts belongs to no cluster i.e. clusterId = ''
-		#then set clusterId as some unique value
-		if not cid_e1cid:
-			clusterId = 'SPL' + '%.0f' % time.time()
-			cid_e1cid = [(clusterId, '')]
-
-		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
-
-		#store data of merged cluster
-		delete = []
-		names = []
-		final_data = {}
-		for e1cid, each in enumerate(data):
-			queryDict = {'cstNum': each['cstNum']}
-			if payload.get('source'):
-				queryDict.update({'source': payload['source']})
-			if payload.get('version'):
-				queryDict.update({'version': payload['version']})
-			#print each, max_cluster, type(each['cstNum'])
-			col.update(
-				queryDict,
-				{'$set': 
-					{'clusterId': max_cluster[0], 'userClusterId': str(userColObjId)}})
-
-			if not each['clusterId'] == max_cluster[0]:
-				if each.get('dunsName', False):
-					names.append(each['dunsName'])
-
-			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
-		delete = clusts
-		delete.remove(max_cluster[0])
-		final_data['delete'] = delete
-		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
-		#set names
-		if not names:
-			final_data['update']['name'] = ''
-		elif set(names) == 1:
-			final_data['update']['name'] = [names[0]]
-		else:
-			final_data['update']['name'] = getMostFrequentWord(names)
-
-		response = final_data
-
-	except Exception as err:
-		import traceback
-		print (traceback.format_exc())
-		response = {}
-
-	return jsonify({'data': response})
-
-
-@app.route('/split', methods=['POST'])
-@cross_origin()
-def split():
-	"""
-	Split
-	:Parameters:
-	multi: if multi is true
-			split in multiple clusters i.e set multiple clusterId
-		   else
-			split with same clusterID
-	"""
-	try:
 		payload = ast.literal_eval(request.data)
-		csts = payload['cstList']
 		clusterId = payload['clusterId']
 		queryDict = {'clusterId': clusterId}
+
 		if payload.get('source'):
 			queryDict['source'] = payload['source']
 		if payload.get('version'):
 			queryDict['version'] = payload['version']
-		#multi = payload.get('multi', True)
-
-		if isinstance(csts, str):
-			csts = list(csts)
-
-		col = db.LinkageOp1
-		col2 = db.userCollection
-
-		delete = []
-		final_data = {}
-		allCsts = map(
-				lambda x: x['cstNum'],
-				col.find(queryDict, {'_id':0, 'cstNum':1}))
-		print allCsts, csts
-		for c in csts:
-			allCsts.remove(c)
-
-		import time
-		userColObjId = col2.insert({'oldClustCsts': allCsts, 'newClustCsts': csts})
-		clusterId = 'SPL' + '%.0f' % time.time()
-		for e1cid, cs in enumerate(csts):
-			#clusterId = 'SPL' + cs
-			delete.append({'csts': cs})
-			query = {'cstNum': cs}
-
-			if payload.get('source'):
-				query['source'] = payload['source']
-			if payload.get('version'):
-				query['version'] = payload['version']
-
-			col.update(
-				query, {'$set':
-				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
-			#clusterid will always be unique
-			#col2.insert({'cstsOld': [cs], 'cstsNew': })
-
-		#REMOVE THIS CODE LATER
-		"""else:
-				clusterId = 'SPL' + '%.0f' % time.time()
-				for e1cid, cs in enumerate(csts):
-					delete.append({'clusterId': clusterId})
-					col.update({'cstNum': cs}, {'$set':
-						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
 		"""
+			cluster
+			all csts
+			get globutldunsnum
+			query Duns table insert all the results into a list
+			remove duns results with duns num in lop table
+		"""
+		response_data = []
 		
-		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
+		csts = list(col.find(queryDict))
+		cstDuns = list(set(map(lambda x:x['dunsNum'], csts)))
+		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
+		
+		duns = dict(
+				map(lambda x:(x['dunsNum'], x), 
+					colDuns.find({'globalUltDunsNum': {'$in': glbUltDunsNums}})))
+		#only get those duns which are not present in linkageop1 result
+		filtered_duns = [duns.pop(cd) for cd in cstDuns if duns.get(cd)]
+		#filtered_duns = map(lambda x: not duns.get(x), duns)
+		for data in duns.values():
+			tmp = {}
+			tmp['dunsName'] = data['dunsName']
+			tmp['dunsNum'] = data['dunsNum']
+			tmp['cityName'] = data['cityName']
+			tmp['stateProvAbb'] = data['stateProvAbb']
+			tmp['yr3EmployeeCount'] = data['yr3EmployeeCount']
+			tmp['yr3BaseSaleAmt'] = data['yr3BaseSaleAmt']
+			tmp['globalUltDunsName'] = data['globalUltDunsName']
+			response_data.append(tmp)
 
-		final_data['delete'] = delete
-		final_data['name'] = getMostFrequentWord(names)
-		response = final_data
-
-	except Exception as err:
-		import traceback
-		print (traceback.format_exc())
-		response = {}
-
-	return jsonify({'data': response})
-	
-	
-@app.route('/logo/dunsall', methods=['POST'])
-@cross_origin()
-def get_dunsall():
-	response_data = {}
-	try:
-		queryDict = {}
-		queryDictDuns = {}
-		queryDictLinkage = {}
-		payload = ast.literal_eval(request.data)
-		#payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
-		clusterId = payload['clustId']
-		globalUltDunsNum = payload['globalUltDunsNum']
-
-		if payload.get('source', ''):
-			queryDict.update({'source': payload.get('source', '')})
-
-		if payload.get('version', ''):
-			queryDict.update({'version': payload.get('version', '')})
-
-		queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
-		queryDictLinkage.update({'clusterId': clusterId})
-		queryDictLinkage.update(queryDict)
-
-		colDuns = db.Duns
-		colLinkage = db.LinkageOp1
-
-		dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
-		dataLinkage = list(colLinkage.find(queryDictLinkage))
-
-		tmp = {}
-		#hashmap of index of a perticular dunsNum in dataDuns
-		for idx, d in enumerate(dataDuns):
-			tmp[d['dunsNum']] = idx+1
-
-		index = 0
-		for data in dataLinkage:
-			if tmp.get(data['dunsNum']):
-				if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
-					index += 1
-					dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
-
-				print index, tmp[data['dunsNum']], data['dunsNum']
-		response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
-		response_data = {'response': {}, 'presentin': '','total': ''}
+		response_data = []
 	return jsonify({'data': response_data})
+
+
+@app.route('/logo/crecord', methods=['POST'])
+@cross_origin()
+def cRecord():
+	try:
+		col = db.LinkageOp1
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = []
+		for data in col.find(queryDict):
+			customers = data['customer']
+			for customer in customers:
+				tmp = {}
+				tmp['cstNum'] = data['cstNum']
+				tmp['cstName'] = data['cstName']
+				# Added Field in Data
+				tmp['cName'] = customer.get('cName','')
+				tmp['cCity'] = customer['cCity']
+				tmp['cNum'] = customer['cNum']
+				tmp['cAddress'] = customer['cAddress']
+				tmp['cEmail'] = customer['cEmail']
+				tmp['cPhone'] = customer['cPhone']
+				response_data.append(tmp)
+			
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+	return jsonify({'data': response_data})
+
+
+@app.route('/ctlegalentity', methods=['POST'])
+@cross_origin()
+def ctLegalEntities():
+	try:
+		col = db.LinkageOp1
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = []
+		for data in col.find(queryDict,{'_id':0}):
+			for c in data['customer']:
+				for le in c['legalEntity']:
+					tmp = {}
+					tmp['entityName'] = le['entityName']
+					tmp['entityNum'] = le['entityNum']
+					tmp['entityType'] = le['entityType']
+					tmp['state'] = le.get('stateProvAbb', '')
+					tmp['affNum'] = le['affNum']
+					tmp['affName'] = le['affName']
+					response_data.append(tmp)
+
+	except Exception as err:
+			import traceback
+			print(traceback.format_exc())
+			response_data = []
+	return jsonify({'data': response_data})
+
+# @app.route('/merge', methods=['POST'])
+# @cross_origin()
+# def merge():
+# 	response = {}
+
+# 	try:
+# 		payload = ast.literal_eval(request.data)
+# 		clusts = payload['clustIdList']
+
+# 		if isinstance(clusts, str):
+# 			clusts = list(clusts)
+
+# 		col = db.LinkageOp1
+# 		col2 = db.userCollection
+		
+# 		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
+# 		cond = {'clusterId':{'$in': clusts}}
+
+# 		cond = {'clusterId':{'$in': clusts}}
+# 		if payload.get('source'):
+# 			cond['source'] = payload['source']
+# 		if payload.get('version'):
+# 			cond['version'] = payload['version']
+
+# 		redc = 'function(curr, result) {}'
+# 		initial = {}
+# 		data = list(col.group(key, cond, initial, redc))
+
+# 		allCstNum = map(lambda x: x['cstNum'], data)
+# 		userColObjId = col2.insert({'csts': allCstNum})
+
+# 		cid_e1cid = filter(lambda x: x[0], map(
+# 			lambda x: (x['clusterId'],x['e1ClusterId']), data))
+# 		#if csts belongs to no cluster i.e. clusterId = ''
+# 		#then set clusterId as some unique value
+# 		if not cid_e1cid:
+# 			clusterId = 'SPL' + '%.0f' % time.time()
+# 			cid_e1cid = [(clusterId, '')]
+
+# 		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
+
+# 		#store data of merged cluster
+# 		delete = []
+# 		names = []
+# 		final_data = {}
+# 		for e1cid, each in enumerate(data):
+# 			queryDict = {'cstNum': each['cstNum']}
+# 			if payload.get('source'):
+# 				queryDict.update({'source': payload['source']})
+# 			if payload.get('version'):
+# 				queryDict.update({'version': payload['version']})
+# 			#print each, max_cluster, type(each['cstNum'])
+# 			col.update(
+# 				queryDict,
+# 				{'$set': 
+# 					{'clusterId': max_cluster[0], 'userClusterId': str(userColObjId)}})
+
+# 			if not each['clusterId'] == max_cluster[0]:
+# 				if each.get('dunsName', False):
+# 					names.append(each['dunsName'])
+
+# 			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
+# 		delete = clusts
+# 		delete.remove(max_cluster[0])
+# 		final_data['delete'] = delete
+# 		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
+# 		#set names
+# 		if not names:
+# 			final_data['update']['name'] = ''
+# 		elif set(names) == 1:
+# 			final_data['update']['name'] = [names[0]]
+# 		else:
+# 			final_data['update']['name'] = getMostFrequentWord(names)
+
+# 		response = final_data
+
+# 	except Exception as err:
+# 		import traceback
+# 		print (traceback.format_exc())
+# 		response = {}
+
+# 	return jsonify({'data': response})
+
+
+# @app.route('/split', methods=['POST'])
+# @cross_origin()
+# def split():
+# 	"""
+# 	Split
+# 	:Parameters:
+# 	multi: if multi is true
+# 			split in multiple clusters i.e set multiple clusterId
+# 		   else
+# 			split with same clusterID
+# 	"""
+# 	try:
+# 		payload = ast.literal_eval(request.data)
+# 		csts = payload['cstList']
+# 		clusterId = payload['clusterId']
+# 		queryDict = {'clusterId': clusterId}
+# 		if payload.get('source'):
+# 			queryDict['source'] = payload['source']
+# 		if payload.get('version'):
+# 			queryDict['version'] = payload['version']
+# 		#multi = payload.get('multi', True)
+
+# 		if isinstance(csts, str):
+# 			csts = list(csts)
+
+# 		col = db.LinkageOp1
+# 		col2 = db.userCollection
+
+# 		delete = []
+# 		final_data = {}
+# 		allCsts = map(
+# 				lambda x: x['cstNum'],
+# 				col.find(queryDict, {'_id':0, 'cstNum':1}))
+# 		print allCsts, csts
+# 		for c in csts:
+# 			allCsts.remove(c)
+
+# 		import time
+# 		userColObjId = col2.insert({'oldClustCsts': allCsts, 'newClustCsts': csts})
+# 		clusterId = 'SPL' + '%.0f' % time.time()
+# 		for e1cid, cs in enumerate(csts):
+# 			#clusterId = 'SPL' + cs
+# 			delete.append({'csts': cs})
+# 			query = {'cstNum': cs}
+
+# 			if payload.get('source'):
+# 				query['source'] = payload['source']
+# 			if payload.get('version'):
+# 				query['version'] = payload['version']
+
+# 			col.update(
+# 				query, {'$set':
+# 				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
+# 			#clusterid will always be unique
+# 			#col2.insert({'cstsOld': [cs], 'cstsNew': })
+
+# 		#REMOVE THIS CODE LATER
+# 		"""else:
+# 				clusterId = 'SPL' + '%.0f' % time.time()
+# 				for e1cid, cs in enumerate(csts):
+# 					delete.append({'clusterId': clusterId})
+# 					col.update({'cstNum': cs}, {'$set':
+# 						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
+# 		"""
+		
+# 		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
+
+# 		final_data['delete'] = delete
+# 		final_data['name'] = getMostFrequentWord(names)
+# 		response = final_data
+
+# 	except Exception as err:
+# 		import traceback
+# 		print (traceback.format_exc())
+# 		response = {}
+
+# 	return jsonify({'data': response})
+	
+# Not required as of now
+# @app.route('/logo/dunsall', methods=['POST'])
+# @cross_origin()
+# def get_dunsall():
+# 	response_data = {}
+# 	try:
+# 		queryDict = {}
+# 		queryDictDuns = {}
+# 		queryDictLinkage = {}
+# 		payload = ast.literal_eval(request.data)
+# 		#payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
+# 		clusterId = payload['clustId']
+# 		globalUltDunsNum = payload['globalUltDunsNum']
+
+# 		if payload.get('source', ''):
+# 			queryDict.update({'source': payload.get('source', '')})
+
+# 		if payload.get('version', ''):
+# 			queryDict.update({'version': payload.get('version', '')})
+
+# 		queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
+# 		queryDictLinkage.update({'clusterId': clusterId})
+# 		queryDictLinkage.update(queryDict)
+
+# 		colDuns = db.Duns
+# 		colLinkage = db.LinkageOp1
+
+# 		dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
+# 		dataLinkage = list(colLinkage.find(queryDictLinkage))
+
+# 		tmp = {}
+# 		#hashmap of index of a perticular dunsNum in dataDuns
+# 		for idx, d in enumerate(dataDuns):
+# 			tmp[d['dunsNum']] = idx+1
+
+# 		index = 0
+# 		for data in dataLinkage:
+# 			if tmp.get(data['dunsNum']):
+# 				if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
+# 					index += 1
+# 					dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
+
+# 				print index, tmp[data['dunsNum']], data['dunsNum']
+# 		response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
+# 	except Exception as err:
+# 		import traceback
+# 		print(traceback.format_exc())
+# 		response_data = {'response': {}, 'presentin': '','total': ''}
+# 	return jsonify({'data': response_data})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
