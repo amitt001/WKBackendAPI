@@ -553,6 +553,24 @@ def summaryData(queryDict, **kwargs):
 		print traceback.format_exc()
 	return clusterData
 
+def getCleanClusterName(textName):
+	textName = " " + textName + " "
+	mapping = db.Mapping
+	suffixMappers =  list(mapping.find({'mappingCategory':'suffixMapper'}))
+
+	for suffixMapper in suffixMappers:
+		key = suffixMapper['suffixKey']
+		value = suffixMapper['suffixValue']
+		textName = textName.replace(key,value)
+
+	suffixRemovers =  list(mapping.find({'mappingCategory':'suffixRemover'}))
+
+	for suffixRemover in suffixRemovers:
+		suffix = suffixRemover['suffix']
+		textName.replace(suffix, " ")
+	
+	return textName.strip()
+
 @app.route('/logo/summary', methods=['POST'])
 @cross_origin()
 def getSummary():
@@ -578,6 +596,15 @@ def getSummary():
 
 	#db = MongoClient().testdb.testcol
 	col = db.LinkageOp1
+
+	# Getting search term from the data
+	clusterName = col.find(queryDict, {'_id':0, 'clusterName':1})[0]
+	cleanClusterName = getCleanClusterName(clusterName)
+
+	names = map(lambda x: x['cstName'], list(col.find(queryDict, {'cstName':1,'_id':0})))
+	frequentName = getMostFrequentWord(names)
+
+	response_data['searchTerm'] = '"' + searchTerm + '"' + ' ' + '"' + names + '"'
 
 	#FOR Pie CHART By Segment
 	pipeline = [
