@@ -888,12 +888,12 @@ def search():
 		payload = ast.literal_eval(request.data)
 
 		searchTerm = payload['searchTerm']
-		queryDict = {'clusterName': {'$regex' : searchTerm ,'$options':'i'}}
+		# queryDict = {'clusterName': {'$regex' : searchTerm ,'$options':'i'}}
 
 		if payload.get('source'):
-			queryDict['source'] = payload['source']
+			source = payload['source']
 		if payload.get('version'):
-			queryDict['version'] = payload['version']
+			version = payload['version']
 
 		# response_data = []
 		# datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1},limit=200))
@@ -907,7 +907,7 @@ def search():
 		# if len(response_data) > 15:
 		# 	response_data = response_data[:15]
 		response_data = list(collection.aggregate([
-			{"$match":queryDict},
+			{"$match":{"source":source,"version":version,"clusterName":{"$regex":searchTerm,'$options':'i'}}},
 			{"$group":{"_id":"$clusterId","isVerified":{"$first":"$isVerified"},"clusterId":{"$first":"$clusterId"},"clusterName":{"$first":"$clusterName"},"count":{"$sum":1}}},
 			{"$sort":{"count":-1}},
 			{"$limit":20}]
