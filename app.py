@@ -505,7 +505,7 @@ def summaryData(queryDict, **kwargs):
 										{'$group': {'_id': 'null',
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
-		#c count
+		# c count
 		clusterData['noOfCs'] = list(col.aggregate([
 							{'$match': queryDict},
 							{'$unwind': "$customer"},
@@ -513,12 +513,12 @@ def summaryData(queryDict, **kwargs):
 							{'$group':
 								{'_id': 'null', 'number': 
 									{'$sum': "$count"}}}]))[0]['number']
-		#Duplicate
+		# duplicate
 		clusterData['noOfCDups'] = (clusterData['noOfCs']-
 										len(list(col.aggregate([
 											{'$match': queryDict},
 											{'$group': {'_id': 'null', 'items':
-											{'$addToSet': "$customer.cName"}}}]))[0]['items']))
+											{'$addToSet': "$customer.cNum"}}}]))[0]['items']))
 												
 		clusterData['revenue'] = list(col.aggregate([
 								{'$match': queryDict}, 
@@ -895,17 +895,23 @@ def search():
 		if payload.get('version'):
 			queryDict['version'] = payload['version']
 
-		response_data = []
-		datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1},limit=200))
-		cids = {}
-		for data in datas:
-			if cids.get(data['clusterId']):
-				continue
-			response_data.append(data)
-			cids[data['clusterId']] = True
+		# response_data = []
+		# datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1},limit=200))
+		# cids = {}
+		# for data in datas:
+		# 	if cids.get(data['clusterId']):
+		# 		continue
+		# 	response_data.append(data)
+		# 	cids[data['clusterId']] = True
 
-		if len(response_data) > 15:
-			response_data = response_data[:15]
+		# if len(response_data) > 15:
+		# 	response_data = response_data[:15]
+		response_data = list(collection.aggregate([
+			{"$match":queryDict},
+			{"$group":{"_id":"$clusterId","isVerified":{"$first":"$isVerified"},"clusterId":{"$first":"$clusterId"},"clusterName":{"$first":"$clusterName"},"count":{"$sum":1}}},
+			{"$sort":{"count":-1}},
+			{"$limit":20}]
+			))
 
 	except Exception as err:
 		import traceback
