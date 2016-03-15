@@ -554,7 +554,7 @@ def summaryData(queryDict, **kwargs):
 	return clusterData
 
 def getCleanClusterName(textName):
-	textName = " " + textName + " "
+	textName = " " + textName.upper() + " "
 	mapping = db.Mapping
 	suffixMappers =  list(mapping.find({'mappingCategory':'suffixMapper'}))
 
