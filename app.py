@@ -1249,14 +1249,23 @@ def search():
 		payload = ast.literal_eval(request.data)
 
 		searchTerm = payload['searchTerm']
-		queryDict = {'clusterName': {'$regex' : clusterId }}
+		queryDict = {'clusterName': {'$regex' : searchTerm }}
 
 		if payload.get('source'):
 			queryDict['source'] = payload['source']
 		if payload.get('version'):
 			queryDict['version'] = payload['version']
 
-		response_data = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1}))
+		response_data = []
+		datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1}))
+		cids = {}
+		for data in datas:
+			if cids.get(data['clusterId']):
+				continue
+			response_data.append(data)
+
+		if len(response_data) > 10:
+			response_data = response_data[:10]
 
 	except Exception as err:
 		import traceback
