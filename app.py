@@ -498,7 +498,9 @@ def summaryData(queryDict, **kwargs):
 				{'$match': queryDict},
 				{'$group': {'_id': '',
 					'all': {'$push': '$cstNum'},
-					'unique': {'$addToSet': '$cstNum'}}}])))[0]
+					'unique': {'$addToSet': '$cstNum'}}}])))
+                print csts
+                csts = csts[0]
 
 		clusterData['noOfCSTs'] = len(csts['all'])
 		clusterData['noOfCstDups'] = clusterData['noOfCSTs'] - len(csts['unique'])
@@ -592,7 +594,7 @@ def summaryData(queryDict, **kwargs):
 		#clusterData['addresses'] = len(
 		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
 	except IndexError as err:
-		import tracback
+		import traceback
 		print(traceback.format_exc())
 		clusterData = {"noOfCSTs": "",
 						"noOfCstDups": "",
@@ -766,7 +768,7 @@ def getSummary():
 
 	#FOR MAP SUMMARY
 	data = []
-	states = col.distinct('stateProvAbb', {'clusterId': clusterId})
+	states = col.distinct('stateProvAbb', queryDict)
 	for state in states:
 		queryDict.update({'stateProvAbb': state})
 		dt = summaryData(queryDict = queryDict, is_map=True)
