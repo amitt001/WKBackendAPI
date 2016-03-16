@@ -989,6 +989,7 @@ def cRecord():
 @cross_origin()
 def ctLegalEntities():
 	try:
+		import mapping
 		col = db.LinkageOp1
 		payload = ast.literal_eval(request.data)
 		clusterId = payload['clusterId']
