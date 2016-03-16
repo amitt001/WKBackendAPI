@@ -1001,16 +1001,18 @@ def ctLegalEntities():
 
 		response_data = []
 		for data in col.find(queryDict,{'_id':0}):
-			for c in data['customer']:
-				for le in c['legalEntity']:
-					tmp = {}
-					tmp['entityName'] = le['entityName']
-					tmp['entityNum'] = le['entityNum']
-					tmp['entityType'] = le['entityType']
-					tmp['state'] = le.get('stateProvAbb', '')
-					tmp['affNum'] = le['affNum']
-					tmp['affName'] = le['affName']
-					response_data.append(tmp)
+			if data['customer'] is not None:
+				for c in data['customer']:
+					if c['legalEntity'] is not None:
+						for le in c['legalEntity']:
+							tmp = {}
+							tmp['entityName'] = le['entityName']
+							tmp['entityNum'] = le['entityNum']
+							tmp['entityType'] = le['entityType']
+							tmp['state'] = le.get('stateProvAbb', '')
+							tmp['affNum'] = le['affNum']
+							tmp['affName'] = le['affName']
+							response_data.append(tmp)
 
 	except Exception as err:
 			import traceback
