@@ -482,9 +482,7 @@ def getClustersList():
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
-# Do not make genearlized function until required
-# Try to optimize the query and do not use aggregate like this
-# For one task one aggregate function
+
 def summaryData(queryDict, **kwargs):
 	"""
 		summary endpoints call this method
@@ -494,18 +492,29 @@ def summaryData(queryDict, **kwargs):
 	clusterData = {}
 	print queryDict
 	try:
-		# db = MongoClient().testdb.testcol
+		#db = MongoClient().testdb.testcol
 		col = db.LinkageOp1
-		# cst count
+		csts = list(list(col.aggregate([
+				{'$match': queryDict},
+				{'$group': {'_id': '',
+					'all': {'$push': '$cstNum'},
+					'unique': {'$addToSet': '$cstNum'}}}])))[0]
+
+		clusterData['noOfCSTs'] = len(csts['all'])
+		clusterData['noOfCstDups'] = clusterData['noOfCSTs'] - len(csts['unique'])
+		#cst count
+		"""
 		clusterData['noOfCSTs'] = col.count(queryDict)
-		# duplicate
+		#Duplicate
 		clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
 										 len(list(col.aggregate([{
 										'$match': queryDict}, 
-										{'$group': {'_id': 'null',
+										{'$group': {'_id': 'cstNum',
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
-		# c count
+		"""
+		#c count
+		"""
 		clusterData['noOfCs'] = list(col.aggregate([
 							{'$match': queryDict},
 							{'$unwind': "$customer"},
@@ -513,12 +522,46 @@ def summaryData(queryDict, **kwargs):
 							{'$group':
 								{'_id': 'null', 'number': 
 									{'$sum': "$count"}}}]))[0]['number']
-		# duplicate
-		clusterData['noOfCDups'] = (clusterData['noOfCs']-
-										len(list(col.aggregate([
-											{'$match': queryDict},
-											{'$group': {'_id': 'null', 'items':
-											{'$addToSet': "$customer.cNum"}}}]))[0]['items']))
+		"""
+
+		customer = list(col.aggregate([
+							{'$match': queryDict},
+							{'$unwind': "$customer"},
+							{'$group':
+								{'_id': '', 
+								'all':{'$push':'$customer.cNum'}, 
+								'unique':{'$addToSet':'$customer.cNum'}}}]))[0]
+
+		clusterData['noOfCs'] = len(customer['all'])
+		#Duplicate
+		clusterData['noOfCDups'] = clusterData['noOfCs'] - len(customer['unique'])
+
+		#le
+		raw_le = list(col.aggregate([{'$match': queryDict},
+					{'$project':{'customer':1}},
+					{'$group':{'_id':'','all':
+						{'$push':'$customer.legalEntity.entityNum'},
+						'unique':{'$addToSet':'$customer.legalEntity.entityNum'},
+						'all_aff': {'$push': '$customer.legalEntity.affNum'}}}]))[0]
+
+		#unique_le =[] 
+		all_le = []
+		#_ = map(lambda x: unique_le.extend(x), filter(lambda x:x, raw_le['unique']))
+		#_ = map(lambda x: all_le.extend(x), filter(lambda x:x, raw_le['all']))
+		for le in raw_le['all']:
+			for i in range(len(le)):
+				_ = map(lambda x:all_le.append(x), filter(lambda x:x, le[i]))
+
+		all_aff = []
+		for le in raw_le['all_aff']:
+			for i in range(len(le)):
+				_ = map(lambda x:all_aff.append(x), filter(lambda x:x, le[i]))
+
+		clusterData['noOfLes'] = len(all_le)
+		clusterData['noOfLeDups'] = clusterData['noOfLes'] - len(set(all_le))
+
+		clusterData['noOfAffNum'] = len(all_aff)
+		clusterData['noOfAffNumDups'] = clusterData['noOfAffNum'] - len(set(all_aff))
 												
 		clusterData['revenue'] = list(col.aggregate([
 								{'$match': queryDict}, 
@@ -527,20 +570,36 @@ def summaryData(queryDict, **kwargs):
 									{'$sum':'$revenue'}}}]))[0]['revenue']
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
-											lambda x:int(x['yr3BaseSaleAmt'] if x['yr3BaseSaleAmt'] is not None else 0), 
+											lambda x:int(x['yr3BaseSaleAmt']), 
 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
+
+		custData = list(col.aggregate([{
+								'$match': queryDict},{
+								'$unwind': "$customer"},{
+								'$group':{'_id':'', 'cEmail':{
+									'$addToSet': '$customer.cEmail'}, 
+									'cPhone':{'$addToSet': '$customer.cPhone'}, 
+									'cAddress':{'$addToSet':'$customer.cAddress'}}}]))[0]
 
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
 			clusterData['noOf'+itm.lstrip('c')] = len(
+				filter(lambda x:x, custData[itm]))
+		"""
+		for itm in ['cEmail', 'cAddress', 'cPhone']:
+			clusterData['noOf'+itm.lstrip('c')] = len(
 				filter(lambda x: x, col.distinct('customer.'+itm, queryDict)))
+		"""
 		#clusterData['addresses'] = len(
 		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
 	except IndexError as err:
-		print err
+		import tracback
+		print(traceback.format_exc())
 		clusterData = {"noOfCSTs": "",
 						"noOfCstDups": "",
 						"noOfCs": "",
-						"noOfCDups": "", 
+						"noOfCDups": "",
+						"noOfLes": "",
+						"noOfLeDups": "", 
 						"revenue": "", 
 						"noOfEmail": "", 
 						"noOfAddress": "", 
@@ -552,6 +611,77 @@ def summaryData(queryDict, **kwargs):
 		import traceback
 		print traceback.format_exc()
 	return clusterData
+
+# Do not make genearlized function until required
+# Try to optimize the query and do not use aggregate like this
+# For one task one aggregate function
+# def summaryData(queryDict, **kwargs):
+# 	"""
+# 		summary endpoints call this method
+# 			:Parameters:
+# 				queryDict: a dictionary to query from mongoDB
+# 	"""
+# 	clusterData = {}
+# 	print queryDict
+# 	try:
+# 		# db = MongoClient().testdb.testcol
+# 		col = db.LinkageOp1
+# 		# cst count
+# 		clusterData['noOfCSTs'] = col.count(queryDict)
+# 		# duplicate
+# 		clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
+# 										 len(list(col.aggregate([{
+# 										'$match': queryDict}, 
+# 										{'$group': {'_id': 'null',
+# 										'items': {'$addToSet': 
+# 										"$cstNum"}}}]))[0]['items']))
+# 		# c count
+# 		clusterData['noOfCs'] = list(col.aggregate([
+# 							{'$match': queryDict},
+# 							{'$unwind': "$customer"},
+# 							{'$project': {'count': {'$add':1}}},
+# 							{'$group':
+# 								{'_id': 'null', 'number': 
+# 									{'$sum': "$count"}}}]))[0]['number']
+# 		# duplicate
+# 		clusterData['noOfCDups'] = (clusterData['noOfCs']-
+# 										len(list(col.aggregate([
+# 											{'$match': queryDict},
+# 											{'$group': {'_id': 'null', 'items':
+# 											{'$addToSet': "$customer.cNum"}}}]))[0]['items']))
+												
+# 		clusterData['revenue'] = list(col.aggregate([
+# 								{'$match': queryDict}, 
+# 								{'$group':
+# 									{'_id':'', 'revenue': 
+# 									{'$sum':'$revenue'}}}]))[0]['revenue']
+# 		if kwargs.get('is_map'):
+# 			clusterData['yr3BaseSaleAmt'] = sum(map(
+# 											lambda x:int(x['yr3BaseSaleAmt'] if x['yr3BaseSaleAmt'] is not None else 0), 
+# 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
+
+# 		for itm in ['cEmail', 'cAddress', 'cPhone']:
+# 			clusterData['noOf'+itm.lstrip('c')] = len(
+# 				filter(lambda x: x, col.distinct('customer.'+itm, queryDict)))
+# 		#clusterData['addresses'] = len(
+# 		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
+# 	except IndexError as err:
+# 		print err
+# 		clusterData = {"noOfCSTs": "",
+# 						"noOfCstDups": "",
+# 						"noOfCs": "",
+# 						"noOfCDups": "", 
+# 						"revenue": "", 
+# 						"noOfEmail": "", 
+# 						"noOfAddress": "", 
+# 						"noOfPhone": ""}
+# 		if kwargs.get('is_map'):
+# 			clusterData.update({'yr3BaseSaleAmt': ""})
+
+# 	except Exception as err:
+# 		import traceback
+# 		print traceback.format_exc()
+# 	return clusterData
 
 def getCleanClusterName(textName):
 	textName = " " + textName.upper() + " "
@@ -921,6 +1051,72 @@ def search():
 		response_data = []
 
 	return jsonify({'data': response_data})
+
+
+@app.route('/logo/nonctlegalent', methods=['POST'])
+@cross_origin()
+def nonctlegalent():
+	try:
+		import mapping
+		import re
+		col = db.LinkageOp1
+		col1 = db.SOS
+
+		payload = ast.literal_eval(request.data)
+
+		clusterId = payload['clusterId']
+
+		queryDict = {'clusterId': clusterId}
+		queryDict['source'] = payload['source']
+		queryDict['version'] = payload['version']
+
+		csts = list(col.find(queryDict))
+		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
+		sos = col1.find({'globalUltDunsNum' : {'$in': glbUltDunsNums}})
+
+		leDict = {}
+		tmpDict = {}
+		jurismapper = mapping.jurisMapping
+		for cst in csts:
+			customer = cst['customer']
+			for c in customer:
+				if c.get('legalEntity'):
+					le = c['legalEntity']
+					if not le.get('stateProvAbb'):
+						le['stateProvAbb'] = jurismapper.get(le['jurisId'], '')
+					leDict[le['entityNum']] = le
+					#for fast lookup in sos
+					tmpDict[le['stateProvAbb'] + le['entityNum']] = True
+
+
+		response_data = {}
+		data = []
+		maps = mapping.names
+		splchar = mapping.splchar
+		missedReps = []
+		for s in sos:
+			#for l in leDict.keys():
+			if not tmpDict.get(s['filingState'] + s['filingNum']):
+				missedreps.append(leDict.pop(l['entityNum']))
+				#if s['filingNum'] == l['entityNum'] and s['filingState'] == l['stateProvAbb']:
+				#	continue
+				#else:
+			if maps.get(s['BE_NM']):
+				data.append(s)
+			elif filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
+				data.append(s)
+			else:
+				continue
+		response_data['missedReps'] = missedreps
+		response_data['sos'] = data
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = {}
+
+	return jsonify({'data': response_data})
+
+
 # @app.route('/merge', methods=['POST'])
 # @cross_origin()
 # def merge():
