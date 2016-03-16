@@ -735,41 +735,117 @@ def getSummary():
 
 	response_data['searchTerm'] = '"' + cleanClusterName + '"' + ' ' + '"' + frequentName + '"'
 
-	#FOR Pie CHART By Segment
+	#FOR PI CHART By Segment
 	pipeline = [
 		{'$match': queryDict},
-		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
-
+		{'$group': {'_id': '$segment', 'count': {'$sum':1}, 'revenue': {'$sum': '$revenue'}}}]
 	data = list(col.aggregate(pipeline))
-	new_data = []
-	# Adding Misc. for some of the category
+
+	new_data = {}
 	for sg in data:
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
-		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+		new_data[sg['_id']] = {}
+		new_data[sg['_id']]['segment'] = new_data.get(sg['_id'], {}).get('segment', 0) + sg['count']
+		new_data[sg['_id']]['revenue'] = new_data.get(sg['_id'], {}).get('revenue', 0) + sg['revenue']
 	response_data['pie'] = new_data
 
-	#Pie Chart Segment Revenue
+	#PI chart segment revenue
 	pipeline = [
 		{'$match': queryDict},
 		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
 	data = list(col.aggregate(pipeline))
-	new_data = []
+
+	"""
+	new_data = {}
 	for sg in data:
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+
 	response_data['pieRev'] = new_data
+	"""
 
 	#FOR MAP SUMMARY
 	data = []
-	for state in col.distinct('stateProvAbb', {'clusterId': clusterId}):
+	states = col.distinct('stateProvAbb', {'clusterId': clusterId})
+	for state in states:
 		queryDict.update({'stateProvAbb': state})
-		# Need to change it over here
 		dt = summaryData(queryDict = queryDict, is_map=True)
 		dt.update({'state':state})
 		data.append(dt)
 	response_data['map'] = data
 
 	return jsonify({'data': response_data})
+
+
+# @app.route('/logo/summary', methods=['POST'])
+# @cross_origin()
+# def getSummary():
+# 	"""
+# 		returns summary of a cluster
+# 	"""
+# 	response_data = {}
+# 	queryDict = {}
+# 	payload = ast.literal_eval(request.data)
+# 	# We require these 3 data as it is not optional
+# 	# We can pass a message to API if these call is not valid
+
+# 	clusterId = payload['clustId']
+# 	queryDict.update({'clusterId': clusterId})
+
+# 	if payload.get('source', ''):
+# 		queryDict.update({'source': payload.get('source', '')})
+
+# 	if payload.get('version', ''):
+# 		queryDict.update({'version': payload.get('version', '')})
+
+# 	data = summaryData(queryDict = queryDict)	
+# 	response_data['summary'] = data
+
+# 	col = db.LinkageOp1
+# 	clusterName = col.find_one(queryDict)['clusterName']
+
+# 	cleanClusterName = getCleanClusterName(clusterName)
+
+# 	names = map(lambda x: x['cstName'], list(col.find(queryDict, {'cstName':1,'_id':0})))
+# 	frequentName = getMostFrequentWord(names)
+
+# 	response_data['searchTerm'] = '"' + cleanClusterName + '"' + ' ' + '"' + frequentName + '"'
+
+# 	#FOR Pie CHART By Segment
+# 	pipeline = [
+# 		{'$match': queryDict},
+# 		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
+
+# 	data = list(col.aggregate(pipeline))
+# 	new_data = []
+# 	# Adding Misc. for some of the category
+# 	for sg in data:
+# 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+# 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+# 	response_data['pie'] = new_data
+
+# 	#Pie Chart Segment Revenue
+# 	pipeline = [
+# 		{'$match': queryDict},
+# 		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
+# 	data = list(col.aggregate(pipeline))
+# 	new_data = []
+# 	for sg in data:
+# 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+# 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+# 	response_data['pieRev'] = new_data
+
+# 	#FOR MAP SUMMARY
+# 	data = []
+# 	for state in col.distinct('stateProvAbb', {'clusterId': clusterId}):
+# 		queryDict.update({'stateProvAbb': state})
+# 		# Need to change it over here
+# 		dt = summaryData(queryDict = queryDict, is_map=True)
+# 		dt.update({'state':state})
+# 		data.append(dt)
+# 	response_data['map'] = data
+
+# 	return jsonify({'data': response_data})
 
 
 @app.route('/logo/ctbusinesslocation', methods=['POST'])
@@ -1053,7 +1129,7 @@ def search():
 	return jsonify({'data': response_data})
 
 
-@app.route('/logo/nonctlegalent', methods=['POST'])
+@app.route('/lo/nonctlegalent', methods=['POST'])
 @cross_origin()
 def nonctlegalent():
 	try:
