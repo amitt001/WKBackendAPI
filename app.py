@@ -1336,6 +1336,7 @@ def search():
 @cross_origin()
 def nonctlegalent():
 	try:
+		import jurismapper
 		col = db.LinkageOp1
 		col1 = db.SOS
 
@@ -1351,26 +1352,47 @@ def nonctlegalent():
 		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
 		sos = col1.find({'globalUltDunsNum' : {'$in': glbUltDunsNums}})
 
+		leDict = {}
+		tmpDict = {}
+		for cst in csts:
+			customer = cst['customer']
+			for c in customer:
+				if c.get('legalEntity'):
+					le = c['legalEntity']
+					if not le.get('stateProvAbb'):
+						le['stateProvAbb'] = jurismapper.get(le['jurisId'], '')
+					leList[le['entityNum']] = le
+					#for fast lookup in sos
+					tmpDict[le['stateProvAbb'] + le['entityNum']] = True
+
+
 		response_data = []
 		import mapping
 		maps = mapping.names
 		splchar = mapping.splchar
+		missedReps = []
 		import re
 		for s in sos:
-			print s['BE_NM']
+			#for l in leDict.keys():
+			if tmpDict.get(s['filingState'] + s['filingNum']):
+				missedreps.append(leDict.pop(l['entityNum']))
+				#if s['filingNum'] == l['entityNum'] and s['filingState'] == l['stateProvAbb']:
+				#	continue
+				#else:
 			if maps.get(s['BE_NM']):
 				response_data.append(s)
 			elif filter(lambda x:x, map(lambda x:re.findall(x, s['BE_NM']), splchar)):
 				response_data.append(s)
 			else:
 				continue
-
+		response_data['missedReps'] = missedreps
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
 		response_data = []
 
 	return jsonify({'data': response_data})
+
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
