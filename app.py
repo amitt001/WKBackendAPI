@@ -660,6 +660,7 @@ def summaryData(queryDict, **kwargs):
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
 		#c count
+		"""
 		clusterData['noOfCs'] = list(col.aggregate([
 							{'$match': queryDict},
 							{'$unwind': "$customer"},
@@ -667,12 +668,34 @@ def summaryData(queryDict, **kwargs):
 							{'$group':
 								{'_id': 'null', 'number': 
 									{'$sum': "$count"}}}]))[0]['number']
+		"""
+
+		customer = list(col.aggregate([
+							{'$match': queryDict},
+							{'$unwind': "$customer"},
+							{'$group':
+								{'_id': '', 
+								'all':{'$push':'$customer.cNum'}, 
+								'unique':{'andToSet':'$customer.cNum'}}}]))[0]
+
+		clusterData['noOfCs'] = len(customer['all'])
 		#Duplicate
-		clusterData['noOfCDups'] = (clusterData['noOfCs']-
-										len(list(col.aggregate([
-											{'$match': queryDict},
-											{'$group': {'_id': 'customer.cName', 'items':
-											{'$addToSet': "$customer.cName"}}}]))[0]['items']))
+		clusterData['noOfCDups'] = clusterData['noOfCs'] - len(customer['unique'])
+
+		#le
+		raw_le = list(col.aggregate([{'$match': queryDict},
+					{'$project':{'customer':1}},
+					{'$group':{'_id':'','all':
+						{'$push':'$customer.legalEntity.entityNum'},
+						'unique':{'$addToSet':'$customer.legalEntity.entityNum'}}}]))[0]
+
+		unique_le =[] 
+		all_le = []
+		_ = map(lambda x: unique_le.extend(x), filter(lambda x:x, raw_le['unique']))
+		_ = map(lambda x: all_le.extend(x), filter(lambda x:x, raw_le['all']))
+
+		clusterData['noOfLes'] = len(all_le)
+		clusterData['noOfLeDups'] = len(unique_le)
 												
 		clusterData['revenue'] = list(col.aggregate([
 								{'$match': queryDict}, 
@@ -854,6 +877,7 @@ def merge():
 	try:
 		col = db.LinkageOp1
 		payload = ast.literal_eval(request.data)
+		print payload
 		csts = payload['cstList']
 		source = payload['source']
 		version = payload['version']
