@@ -732,7 +732,7 @@ def summaryData(queryDict, **kwargs):
 
 		clusterData['noOfLes'] = len(all_le)
 		clusterData['noOfLeDups'] = clusterData['noOfLes'] - len(set(all_le))
-		
+
 		clusterData['noOfAffNum'] = len(all_aff)
 		clusterData['noOfAffNumDups'] = clusterData['noOfAffNum'] - len(set(all_aff))
 												
@@ -1332,6 +1332,45 @@ def search():
 
 	return jsonify({'data': response_data})
 
+@app.route('/nonctlegalent', methods=['POST'])
+@cross_origin()
+def nonctlegalent():
+	try:
+		col = db.LinkageOp1
+		col1 = db.SOS
+
+		payload = ast.literal_eval(request.data)
+
+		clusterId = payload['clusterId']
+
+		queryDict = {'clusterId': clusterId}
+		queryDict['source'] = payload['source']
+		queryDict['version'] = payload['version']
+
+		csts = list(col.find(queryDict))
+		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
+		sos = col1.find({'globalUltDunsNum' : {'$in': glbUltDunsNums}})
+
+		response_data = []
+		import mapping
+		maps = mapping.names
+		splchar = mapping.splchar
+		import re
+		for s in sos:
+			print s['BE_NM']
+			if maps.get(s['BE_NM']):
+				response_data.append(s)
+			elif filter(lambda x:x, map(lambda x:re.findall(x, s['BE_NM']), splchar)):
+				response_data.append(s)
+			else:
+				continue
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+
+	return jsonify({'data': response_data})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
