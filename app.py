@@ -1374,7 +1374,7 @@ def nonctlegalent():
 		missedReps = []
 		for s in sos:
 			#for l in leDict.keys():
-			if tmpDict.get(s['filingState'] + s['filingNum']):
+			if not tmpDict.get(s['filingState'] + s['filingNum']):
 				missedreps.append(leDict.pop(l['entityNum']))
 				#if s['filingNum'] == l['entityNum'] and s['filingState'] == l['stateProvAbb']:
 				#	continue
