@@ -1381,7 +1381,7 @@ def nonctlegalent():
 				#else:
 			if maps.get(s['BE_NM']):
 				response_data.append(s)
-			elif filter(lambda x:x, map(lambda x:re.findall(x, s['BE_NM']), splchar)):
+			elif filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
 				response_data.append(s)
 			else:
 				continue
