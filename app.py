@@ -240,7 +240,6 @@ def getClustersInfo():
 		opDNBNumList = []
 		opDNBNameDict = {}
 		revenue = 0
-		revenueAll = 0
 		noOfC = 0
 
 		# We are doing it by aggregate - so it will take less time to show up
@@ -267,7 +266,7 @@ def getClustersInfo():
 		opDNBNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNameList'])
 		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['cstNameList'])
 		noOfC = len(aggregatedResult['cList'])
-		revenue = aggregatedResult['revenue']
+		# revenue = aggregatedResult['revenue2015']
 		revenue2015 = aggregatedResult['revenue2015']
 		isVerified = aggregatedResult['isVerified']
 		validationDate = aggregatedResult['validationDate']
@@ -295,7 +294,7 @@ def getClustersInfo():
 			clusterName = getMostFrequentWord(opNameList)
 
 		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"revenue":revenue,"revenue2015":revenue2015,
+		singleCluster = {"name" : clusterName,"revenue2015":revenue2015,
 		"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,
 		"value" : clusterSize,"id" : currentDocId,"validationDate":validationDate,"isVerified":isVerified}]}
 		opData["children"].append(singleCluster)
@@ -565,11 +564,11 @@ def summaryData(queryDict, **kwargs):
 		clusterData['noOfAffNum'] = len(all_aff)
 		clusterData['noOfAffNumDups'] = clusterData['noOfAffNum'] - len(set(all_aff))
 												
-		clusterData['revenue'] = list(col.aggregate([
+		clusterData['revenue2015'] = list(col.aggregate([
 								{'$match': queryDict}, 
 								{'$group':
-									{'_id':'', 'revenue': 
-									{'$sum':'$revenue'}}}]))[0]['revenue']
+									{'_id':'', 'revenue2015': 
+									{'$sum':'$revenue2015'}}}]))[0]['revenue2015']
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
 											lambda x:int(x['yr3BaseSaleAmt']), 
@@ -602,7 +601,7 @@ def summaryData(queryDict, **kwargs):
 						"noOfCDups": "",
 						"noOfLes": "",
 						"noOfLeDups": "", 
-						"revenue": "", 
+						"revenue2015": "", 
 						"noOfEmail": "", 
 						"noOfAddress": "", 
 						"noOfPhone": ""}
@@ -740,7 +739,7 @@ def getSummary():
 	#FOR PI CHART By Segment
 	pipeline = [
 		{'$match': queryDict},
-		{'$group': {'_id': '$segment', 'count': {'$sum':1}, 'revenue': {'$sum': '$revenue'}}}]
+		{'$group': {'_id': '$segment', 'count': {'$sum':1}, 'revenue2015': {'$sum': '$revenue2015'}}}]
 	data = list(col.aggregate(pipeline))
 
 	new_data = {}
@@ -748,13 +747,23 @@ def getSummary():
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data[sg['_id']] = {}
 		new_data[sg['_id']]['segment'] = new_data.get(sg['_id'], {}).get('segment', 0) + sg['count']
-		new_data[sg['_id']]['revenue'] = new_data.get(sg['_id'], {}).get('revenue', 0) + sg['revenue']
+		new_data[sg['_id']]['revenue2015'] = new_data.get(sg['_id'], {}).get('revenue2015', 0) + sg['revenue2015']
+
+	pieRevenueData = []
+	pieSegmentData = []
+	for k,v in new_data.iteritems():
+		name = k
+		revenue2015 = v['revenue2015']
+		segment = v['segment']
+		pieRevenueData.append({"name":name,"val":revenue2015})
+		pieSegmentData.append({"name":name,"val":segment})
+
 	response_data['pie'] = new_data
 
 	#PI chart segment revenue
 	pipeline = [
 		{'$match': queryDict},
-		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
+		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue2015'}}}]
 	data = list(col.aggregate(pipeline))
 
 	"""
