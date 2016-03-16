@@ -1368,7 +1368,8 @@ def nonctlegalent():
 					tmpDict[le['stateProvAbb'] + le['entityNum']] = True
 
 
-		response_data = []
+		response_data = {}
+		data = []
 		maps = mapping.names
 		splchar = mapping.splchar
 		missedReps = []
@@ -1380,16 +1381,17 @@ def nonctlegalent():
 				#	continue
 				#else:
 			if maps.get(s['BE_NM']):
-				response_data.append(s)
+				data.append(s)
 			elif filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
-				response_data.append(s)
+				data.append(s)
 			else:
 				continue
 		response_data['missedReps'] = missedreps
+		response_data['sos'] = data
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
-		response_data = []
+		response_data = {}
 
 	return jsonify({'data': response_data})
 
