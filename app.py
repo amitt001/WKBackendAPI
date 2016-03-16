@@ -1363,7 +1363,7 @@ def nonctlegalent():
 					le = c['legalEntity']
 					if not le.get('stateProvAbb'):
 						le['stateProvAbb'] = jurismapper.get(le['jurisId'], '')
-					leList[le['entityNum']] = le
+					leDict[le['entityNum']] = le
 					#for fast lookup in sos
 					tmpDict[le['stateProvAbb'] + le['entityNum']] = True
 
