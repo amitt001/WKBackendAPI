@@ -1170,14 +1170,16 @@ def nonctlegalent():
 		jurismapper = mapping.jurisMapping
 		for cst in csts:
 			customer = cst['customer']
-			for c in customer:
-				if c.get('legalEntity'):
-					le = c['legalEntity']
-					if not le.get('stateProvAbb'):
-						le['stateProvAbb'] = jurismapper.get(le['jurisId'], '')
-					leDict[le['entityNum']] = le
-					#for fast lookup in sos
-					tmpDict[le['stateProvAbb'] + le['entityNum']] = True
+			if customer is not None:
+				for c in customer:
+					if c['legalEntity'] is not None:
+						if c.get('legalEntity'):
+							le = c['legalEntity']
+							if not le.get('stateProvAbb'):
+								le['stateProvAbb'] = jurismapper.get(le['jurisId'], '')
+							leDict[le['entityNum']] = le
+							#for fast lookup in sos
+							tmpDict[le['stateProvAbb'] + le['entityNum']] = True
 
 
 		response_data = {}
