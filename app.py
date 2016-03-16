@@ -1336,7 +1336,8 @@ def search():
 @cross_origin()
 def nonctlegalent():
 	try:
-		import jurismapper
+		import mapping
+		import re
 		col = db.LinkageOp1
 		col1 = db.SOS
 
@@ -1354,6 +1355,7 @@ def nonctlegalent():
 
 		leDict = {}
 		tmpDict = {}
+		jurismapper = mapping.jurisMapping
 		for cst in csts:
 			customer = cst['customer']
 			for c in customer:
@@ -1367,11 +1369,9 @@ def nonctlegalent():
 
 
 		response_data = []
-		import mapping
 		maps = mapping.names
 		splchar = mapping.splchar
 		missedReps = []
-		import re
 		for s in sos:
 			#for l in leDict.keys():
 			if tmpDict.get(s['filingState'] + s['filingNum']):
