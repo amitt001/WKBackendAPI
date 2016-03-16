@@ -638,6 +638,23 @@ def getClustersList():
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
+def getCleanClusterName(textName):
+	textName = " " + textName.upper() + " "
+	mapping = db.Mapping
+	suffixMappers =  list(mapping.find({'mappingCategory':'suffixMapper'}))
+
+	for suffixMapper in suffixMappers:
+		key = suffixMapper['suffixKey']
+		value = suffixMapper['suffixValue']
+		textName = textName.replace(key,value)
+
+	suffixRemovers =  list(mapping.find({'mappingCategory':'suffixRemover'}))
+
+	for suffixRemover in suffixRemovers:
+		suffix = suffixRemover['suffix']
+		textName.replace(suffix, " ")
+	
+	return textName.strip()
 
 def summaryData(queryDict, **kwargs):
 	"""
@@ -650,7 +667,16 @@ def summaryData(queryDict, **kwargs):
 	try:
 		#db = MongoClient().testdb.testcol
 		col = db.LinkageOp1
+		csts = list(list(col.aggregate([
+				{'$match': queryDict},
+				{'$group': {'_id': '',
+					'all': {'$push': '$cstNum'},
+					'unique': {'$addToSet': '$cstNum'}}}])))[0]
+
+		clusterData['noOfCSTs'] = len(csts['all'])
+		clusterData['noOfCstDups'] = clusterData['noOfCSTs'] - len(csts['unique'])
 		#cst count
+		"""
 		clusterData['noOfCSTs'] = col.count(queryDict)
 		#Duplicate
 		clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
@@ -659,6 +685,7 @@ def summaryData(queryDict, **kwargs):
 										{'$group': {'_id': 'cstNum',
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
+		"""
 		#c count
 		"""
 		clusterData['noOfCs'] = list(col.aggregate([
@@ -676,7 +703,7 @@ def summaryData(queryDict, **kwargs):
 							{'$group':
 								{'_id': '', 
 								'all':{'$push':'$customer.cNum'}, 
-								'unique':{'andToSet':'$customer.cNum'}}}]))[0]
+								'unique':{'$addToSet':'$customer.cNum'}}}]))[0]
 
 		clusterData['noOfCs'] = len(customer['all'])
 		#Duplicate
@@ -687,15 +714,27 @@ def summaryData(queryDict, **kwargs):
 					{'$project':{'customer':1}},
 					{'$group':{'_id':'','all':
 						{'$push':'$customer.legalEntity.entityNum'},
-						'unique':{'$addToSet':'$customer.legalEntity.entityNum'}}}]))[0]
+						'unique':{'$addToSet':'$customer.legalEntity.entityNum'},
+						'all_aff': {'$push': '$customer.legalEntity.affNum'}}}]))[0]
 
-		unique_le =[] 
+		#unique_le =[] 
 		all_le = []
-		_ = map(lambda x: unique_le.extend(x), filter(lambda x:x, raw_le['unique']))
-		_ = map(lambda x: all_le.extend(x), filter(lambda x:x, raw_le['all']))
+		#_ = map(lambda x: unique_le.extend(x), filter(lambda x:x, raw_le['unique']))
+		#_ = map(lambda x: all_le.extend(x), filter(lambda x:x, raw_le['all']))
+		for le in raw_le['all']:
+			for i in range(len(le)):
+				_ = map(lambda x:all_le.append(x), filter(lambda x:x, le[i]))
+
+		all_aff = []
+		for le in raw_le['all_aff']:
+			for i in range(len(le)):
+				_ = map(lambda x:all_aff.append(x), filter(lambda x:x, le[i]))
 
 		clusterData['noOfLes'] = len(all_le)
-		clusterData['noOfLeDups'] = len(unique_le)
+		clusterData['noOfLeDups'] = clusterData['noOfLes'] - len(set(all_le))
+		
+		clusterData['noOfAffNum'] = len(all_aff)
+		clusterData['noOfAffNumDups'] = clusterData['noOfAffNum'] - len(set(all_aff))
 												
 		clusterData['revenue'] = list(col.aggregate([
 								{'$match': queryDict}, 
@@ -726,11 +765,14 @@ def summaryData(queryDict, **kwargs):
 		#clusterData['addresses'] = len(
 		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
 	except IndexError as err:
-		print err
+		import tracback
+		print(traceback.format_exc())
 		clusterData = {"noOfCSTs": "",
 						"noOfCstDups": "",
 						"noOfCs": "",
-						"noOfCDups": "", 
+						"noOfCDups": "",
+						"noOfLes": "",
+						"noOfLeDups": "", 
 						"revenue": "", 
 						"noOfEmail": "", 
 						"noOfAddress": "", 
@@ -751,47 +793,31 @@ def getSummary():
 	"""
 	response_data = {}
 	queryDict = {}
-	
-	# outfile = open("output.txt","wb")
-	# outfile.write("---")
-	# payload = json.loads(ast.literal_eval(request.data)['data'])
 	payload = ast.literal_eval(request.data)
-	# outfile.write(str(payload))
-	# outfile.write("@@@@-------")
-	# outfile.close()
-	clusterId = payload['clustId']
+	# We require these 3 data as it is not optional
+	# We can pass a message to API if these call is not valid
 
+	clusterId = payload['clustId']
 	queryDict.update({'clusterId': clusterId})
 
 	if payload.get('source', ''):
-		queryDict.update({'source': payload.get('source', '').capitalize()})
+		queryDict.update({'source': payload.get('source', '')})
 
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
-	
-	col = db.LinkageOp1
-	colMap = db.Mapping
 
-	#FOR SUMMARY
-	data = summaryData(queryDict = queryDict)
+	data = summaryData(queryDict = queryDict)	
 	response_data['summary'] = data
 
-	#get clusterName from linkage
-	searchTerm = col.find(queryDict, {'_id':0, 'clusterName':1})[0]
+	col = db.LinkageOp1
+	clusterName = col.find_one(queryDict)['clusterName']
 
-	#get suffixValue from Mapping using suffixKey
-	mapper = colMap.find({'suffixKey': " " + searchTerm.upper() + " ", },{'suffixValue':1, '_id': 0})
-
-	#if found in mapper get set suffixvaue as searchterm
-	searchTerm = "" if not mapper else mapper[0]['suffixValue']
-
-	if searchTerm and list(colMap.find({'suffix': searchTerm})):
-		searchTerm = ""
+	cleanClusterName = getCleanClusterName(clusterName)
 
 	names = map(lambda x: x['cstName'], list(col.find(queryDict, {'cstName':1,'_id':0})))
-	names = getMostFrequentWord(names)
+	frequentName = getMostFrequentWord(names)
 
-	response_data['searchTerm'] = '"' + searchTerm + '"' + ' ' + '"' + names + '"'
+	response_data['searchTerm'] = '"' + cleanClusterName + '"' + ' ' + '"' + frequentName + '"'
 
 	#FOR PI CHART By Segment
 	pipeline = [
