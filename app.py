@@ -758,7 +758,8 @@ def getSummary():
 		pieRevenueData.append({"name":name,"val":revenue2015})
 		pieSegmentData.append({"name":name,"val":segment})
 
-	response_data['pie'] = new_data
+	response_data['pie'] = pieSegmentData
+	response_data['pieRev'] = pieRevenueData
 
 	#PI chart segment revenue
 	pipeline = [
