@@ -964,18 +964,19 @@ def cRecord():
 		response_data = []
 		for data in col.find(queryDict):
 			customers = data['customer']
-			for customer in customers:
-				tmp = {}
-				tmp['cstNum'] = data['cstNum']
-				tmp['cstName'] = data['cstName']
-				# Added Field in Data
-				tmp['cName'] = customer.get('cName','')
-				tmp['cCity'] = customer['cCity']
-				tmp['cNum'] = customer['cNum']
-				tmp['cAddress'] = customer['cAddress']
-				tmp['cEmail'] = customer['cEmail']
-				tmp['cPhone'] = customer['cPhone']
-				response_data.append(tmp)
+			if customers is not None:
+				for customer in customers:
+					tmp = {}
+					tmp['cstNum'] = data['cstNum']
+					tmp['cstName'] = data['cstName']
+					# Added Field in Data
+					tmp['cName'] = customer.get('cName','')
+					tmp['cCity'] = customer['cCity']
+					tmp['cNum'] = customer['cNum']
+					tmp['cAddress'] = customer['cAddress']
+					tmp['cEmail'] = customer['cEmail']
+					tmp['cPhone'] = customer['cPhone']
+					response_data.append(tmp)
 			
 	except Exception as err:
 		import traceback
