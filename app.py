@@ -998,7 +998,7 @@ def ctLegalEntities():
 			queryDict['source'] = payload['source']
 		if payload.get('version'):
 			queryDict['version'] = payload['version']
-
+		jurismapper = mapping.jurisMapping
 		response_data = []
 		for data in col.find(queryDict,{'_id':0}):
 			if data['customer'] is not None:
@@ -1009,7 +1009,11 @@ def ctLegalEntities():
 							tmp['entityName'] = le['entityName']
 							tmp['entityNum'] = le['entityNum']
 							tmp['entityType'] = le['entityType']
-							tmp['state'] = le.get('stateProvAbb', '')
+							stateProvAbb = le.get('stateProvAbb', '')
+							if stateProvAbb == '':
+								stateProvAbb = jurismapper.get(le['jurisId'], '')
+
+							tmp['state'] = stateProvAbb
 							tmp['affNum'] = le['affNum']
 							tmp['affName'] = le['affName']
 							response_data.append(tmp)
@@ -1144,7 +1148,7 @@ def search():
 	return jsonify({'data': response_data})
 
 
-@app.route('/lo/nonctlegalent', methods=['POST'])
+@app.route('/logo/nonctlegalent', methods=['POST'])
 @cross_origin()
 def nonctlegalent():
 	try:
