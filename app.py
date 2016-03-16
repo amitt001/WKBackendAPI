@@ -1180,32 +1180,39 @@ def nonctlegalent():
 					if c['legalEntity'] is not None:
 						if c.get('legalEntity'):
 							le = c['legalEntity']
-							if not le.get('stateProvAbb'):
-								le['stateProvAbb'] = jurismapper.get(le['jurisId'], '')
-							leDict[le['entityNum']] = le
-							#for fast lookup in sos
-							tmpDict[le['stateProvAbb'] + le['entityNum']] = True
+							for l in le:
+								if not l.get('stateProvAbb'):
+									l['stateProvAbb'] = jurismapper.get(l['jurisId'], '')
+								leDict[l['entityNum']] = l
+								#for fast lookup in sos
+								tmpDict[l['stateProvAbb'] + l['entityNum']] = True
 
 
 		response_data = {}
 		data = []
+		sosmissed = []
 		maps = mapping.names
 		splchar = mapping.splchar
-		missedReps = []
+		missedreps = []
 		for s in sos:
+			s.pop('_id')
+			print s
 			#for l in leDict.keys():
-			if not tmpDict.get(s['filingState'] + s['filingNum']):
-				missedreps.append(leDict.pop(l['entityNum']))
-				#if s['filingNum'] == l['entityNum'] and s['filingState'] == l['stateProvAbb']:
-				#	continue
-				#else:
-			if maps.get(s['BE_NM']):
-				data.append(s)
-			elif filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
-				data.append(s)
+			if maps.get(s['BE_NM']) or filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
+				#data.append(s)
+				if not tmpDict.get(s['filingState'] + s['filingNum']):
+					sosmissed.append(s)
+					#missedreps.append(leDict.pop(s['filingNum']))
+					#leDict.pop(s['filingNum'])
+					#if s['filingNum'] == l['entityNum'] and s['filingState'] == l['stateProvAbb']:
+					#	continue
+					#else:
+				#elif filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
+					#data.append(s)
+					#continue
 			else:
-				continue
-		response_data['missedReps'] = missedreps
+				data.append(s)
+		response_data['missedReps'] = sosmissed
 		response_data['sos'] = data
 	except Exception as err:
 		import traceback
