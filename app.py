@@ -262,7 +262,9 @@ def getClustersInfo():
 			}
 		]))[0]
 
+		clusterType = ""
 		listLength = aggregatedResult['count']
+		opDNBNumList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNumList'])
 		opDNBNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNameList'])
 		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['cstNameList'])
 		noOfC = len(aggregatedResult['cList'])
@@ -270,6 +272,12 @@ def getClustersInfo():
 		revenue2015 = aggregatedResult['revenue2015']
 		isVerified = aggregatedResult['isVerified']
 		validationDate = aggregatedResult['validationDate']
+
+		if len(opDNBNumList)<=1:
+			clusterType = "E1 Cluster"
+		else:
+			clusterType = "E1 DnB Cluster"
+
 
 		for nameDnB in opDNBNameList:
 			if nameDnB not in opDNBNameDict:
@@ -296,7 +304,7 @@ def getClustersInfo():
 		clusterSize = listLength
 		singleCluster = {"name" : clusterName,"revenue2015":revenue2015,
 		"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,
-		"value" : clusterSize,"id" : currentDocId,"validationDate":validationDate,"isVerified":isVerified}]}
+		"value" : clusterSize,"id" : currentDocId,"validationDate":validationDate,"isVerified":isVerified,"clusterType":clusterType}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
