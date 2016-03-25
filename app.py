@@ -994,6 +994,28 @@ def cRecord():
 		response_data = []
 	return jsonify({'data': response_data})
 
+@app.route('/logo/ctservicedetails', methods=['POST'])
+@cross_origin()
+def ctServiceDetails():
+	col = db.LinkageOp1
+	colService = db.ServiceRevenueDetails
+	payload = ast.literal_eval(request.data)
+	# payload = {"source":"E1 DnB Clustered","version":"5.0 - All Data","clusterId":"DNB001367960"}
+	clusterId = payload['clusterId']
+	queryDict = {'clusterId': clusterId}
+
+	if payload.get('source'):
+		queryDict['source'] = payload['source']
+	if payload.get('version'):
+		queryDict['version'] = payload['version']
+
+	cstNums = []
+	for data in col.find(queryDict,{'_id':0,'cstNum':1}):
+		cstNums.append(data['cstNum'])
+	response_data = list(colService.find({"cstNum":{"$in":cstNums}},{"_id":0}))
+	
+	return jsonify({'data': response_data})
+
 
 @app.route('/logo/ctlegalentity', methods=['POST'])
 @cross_origin()
@@ -1446,3 +1468,4 @@ def nonctlegalent():
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
+	# print ctServiceDetails()
