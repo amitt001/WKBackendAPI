@@ -1012,7 +1012,7 @@ def ctServiceDetails():
 	cstNums = []
 	for data in col.find(queryDict,{'_id':0,'cstNum':1}):
 		cstNums.append(data['cstNum'])
-	response_data = list(colService.find({"cstNum":{"$in":cstNums}},{"_id":0}))
+	response_data = list(colService.find({"cstNum":{"$in":cstNums},"serviceTeamNumber":{"$ne":None}},{"_id":0}))
 	
 	return jsonify({'data': response_data})
 
