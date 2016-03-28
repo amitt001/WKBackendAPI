@@ -468,13 +468,12 @@ def getTraceability():
 	clusterId = payload['clusterId']
 
 	queryDict = {"source":source,"version":version,"cstNum":cstNum,"clusterId":clusterId}
-	e1ClusterId = coll.find_one(queryDict,{"e1ClusterId":1,"_id":0})['e1ClusterId']
+	e1ClusterId = db.LinkageOp1.find_one(queryDict,{"e1ClusterId":1,"_id":0})['e1ClusterId']
 	opData = []
 	if e1ClusterId is not None:
 		queryDict.pop("cstNum")
 		queryDict['e1ClusterId'] = e1ClusterId
-		print queryDict
-		opData = list(coll.find(queryDict,{"cstName":1,"cstNum":1,"globalUltDunsName":1,"globalUltDunsNum":1,"_id":0,"address":1}))
+		opData = list(db.LinkageOp1.find(queryDict,{"cstName":1,"cstNum":1,"globalUltDunsName":1,"globalUltDunsNum":1,"_id":0,"address":1}))
 	return jsonify(**opData)
 
 
