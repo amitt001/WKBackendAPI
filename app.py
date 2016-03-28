@@ -456,7 +456,28 @@ def getClusterTablesInfo():
 		print(traceback.format_exc())
 
 	return jsonify({'data':opData})
-	
+
+@app.route('/logo/traceability', methods = ['POST'])
+@cross_origin()
+def getTraceability():
+	payload = ast.literal_eval(request.data)
+	# payload = {"source":"E1 DnB Clustered","version":"5.0 - All Data","clusterId":"DNB001367960","cstNum":"4434076"}
+	source = payload['source']
+	version = payload['version']
+	cstNum = payload['cstNum']
+	clusterId = payload['clusterId']
+
+	queryDict = {"source":source,"version":version,"cstNum":cstNum,"clusterId":clusterId}
+	e1ClusterId = coll.find_one(queryDict,{"e1ClusterId":1,"_id":0})['e1ClusterId']
+	opData = []
+	if e1ClusterId is not None:
+		queryDict.pop("cstNum")
+		queryDict['e1ClusterId'] = e1ClusterId
+		print queryDict
+		opData = list(coll.find(queryDict,{"cstName":1,"cstNum":1,"globalUltDunsName":1,"globalUltDunsNum":1,"_id":0,"address":1}))
+	return jsonify(**opData)
+
+
 
 @app.route('/cluster/getClustersList', methods = ['POST'])
 @cross_origin()
