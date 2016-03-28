@@ -474,7 +474,7 @@ def getTraceability():
 		queryDict.pop("cstNum")
 		queryDict['e1ClusterId'] = e1ClusterId
 		opData = list(db.LinkageOp1.find(queryDict,{"cstName":1,"cstNum":1,"globalUltDunsName":1,"globalUltDunsNum":1,"_id":0,"address":1}))
-	return jsonify(**opData)
+	return jsonify(**{"data":opData})
 
 
 
