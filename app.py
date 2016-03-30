@@ -16,7 +16,7 @@ cors = CORS(app)
 
 #Creating dependency objects
 client = MongoClient(host="172.16.248.156")
-#client = MongoClient()
+# client = MongoClient()
 db = client.WK
 
 
@@ -149,7 +149,6 @@ def getSampleRowsResult():
 	return jsonify({'data': r.json()})
 
 # Added code for Linkage
-
 def ngram(sentence,n):
 	sentence = sentence.lower()
 	sentence = re.sub('[^0-9a-zA-Z]+', ' ', sentence)
@@ -196,165 +195,14 @@ def getMostFrequentWord(resultList):
 	return most_frequent_words_list[0][0].strip().title()
 
 
-def getMostFrequentWordOld3(resultList):
-	duns_number_list = []
-	duns_number_dict = {}
-	for result in resultList:
-		if " :: " not in result:
-			break
-		duns_number = result.split(" :: ")[1]
-		duns_name = duns_number.split(" : ")[0].strip()
-		if duns_name=="":
-			continue
-
-		if duns_name not in duns_number_dict:
-			duns_number_dict[duns_name] = 0
-		duns_number_dict[duns_name] += 1
-		duns_number_list.append(duns_name)
-
-	duns_name_number = list(set(duns_number_list))
-
-	# if it breaks it will not have any element in it
-	if len(duns_name_number)==1:
-		dunsTempName = duns_name_number[0].title()
-		if dunsTempName!="":
-			return dunsTempName
-
-	# rule for greater than 70% check over here
-	totalLengthValues = sum(duns_number_dict.values())
-	if totalLengthValues > 0:
-		maxKey = max(duns_number_dict, key=duns_number_dict.get)
-		maxValue = duns_number_dict[maxKey]
-
-		if maxValue*1.0/totalLengthValues>0.7:
-			return maxKey.title()
-
-	# Normal flow of it
-	listLength = len(resultList)
-	most_frequent_words = ""
-	opResultFinal = []
-	for resultWord in resultList:
-		if " - " in resultWord:
-			result = resultWord.split(" - ")[0]
-		else:
-			result = resultWord
-		ngram1 = ngram(result,1) #[::-1]
-		ngram2 = ngram(result,2) #[::-1]
-		ngram3 = ngram(result,3) #[::-1]
-		ngram4 = ngram(result,4) #[::-1]
-		ngram5 = ngram(result,5) #[::-1]
-		opResultFinal.extend(ngram1)
-		opResultFinal.extend(ngram2)
-		opResultFinal.extend(ngram3)
-		opResultFinal.extend(ngram4)
-		opResultFinal.extend(ngram5)
-
-	opWordCount = {}
-	for element in opResultFinal:
-		if element not in opWordCount:
-			opWordCount[element] = 1
-		else:
-			opWordCount[element] = opWordCount[element] + 1
-
-	most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-	for word_and_count in most_frequent_words_list:
-		if word_and_count[1]*1.0/listLength>.8:
-			return word_and_count[0].strip().title()
-	return most_frequent_words_list[0][0].strip().title()
-
-
-
-def getMostFrequentWordOld2(resultList):
-	duns_number_list = []
-	for result in resultList:
-		if " :: " not in result:
-			break
-		duns_number = result.split(" :: ")[1]
-		duns_number_list.append(duns_number)
-	duns_name_number = list(set(duns_number_list))
-
-	if len(duns_name_number)==1:
-		return duns_name_number[0].split(":")[0].strip().title()
-
-	listLength = len(resultList)
-	most_frequent_words = ""
-	opResultFinal = []
-	for resultWord in resultList:
-		if " - " in resultWord:
-			result = resultWord.split(" - ")[0]
-		else:
-			result = resultWord
-		ngram1 = ngram(result,1) #[::-1]
-		ngram2 = ngram(result,2) #[::-1]
-		ngram3 = ngram(result,3) #[::-1]
-		ngram4 = ngram(result,4) #[::-1]
-		ngram5 = ngram(result,5) #[::-1]
-		opResultFinal.extend(ngram1)
-		opResultFinal.extend(ngram2)
-		opResultFinal.extend(ngram3)
-		opResultFinal.extend(ngram4)
-		opResultFinal.extend(ngram5)
-
-	opWordCount = {}
-	for element in opResultFinal:
-		if element not in opWordCount:
-			opWordCount[element] = 1
-		else:
-			opWordCount[element] = opWordCount[element] + 1
-
-	most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-	for word_and_count in most_frequent_words_list:
-		if word_and_count[1]*1.0/listLength>.8:
-			return word_and_count[0].strip().title()
-	return most_frequent_words_list[0][0].strip().title()
-
-
-def getMostFrequentWordOld(resultList):
-	listLength = len(resultList)
-	most_frequent_words = ""
-	opResultFinal = []
-	for resultWord in resultList:
-		if " - " in resultWord:
-			result = resultWord.split(" - ")[0]
-		else:
-			result = resultWord
-		ngram1 = ngram(result,1) #[::-1]
-		ngram2 = ngram(result,2) #[::-1]
-		ngram3 = ngram(result,3) #[::-1]
-		ngram4 = ngram(result,4) #[::-1]
-		ngram5 = ngram(result,5) #[::-1]
-		opResultFinal.extend(ngram1)
-		opResultFinal.extend(ngram2)
-		opResultFinal.extend(ngram3)
-		opResultFinal.extend(ngram4)
-		opResultFinal.extend(ngram5)
-
-	opWordCount = {}
-	for element in opResultFinal:
-		if element not in opWordCount:
-			opWordCount[element] = 1
-		else:
-			opWordCount[element] = opWordCount[element] + 1
-
-	most_frequent_words_list = sorted(opWordCount.items(), key=lambda x: (len(x[0].split(" ")), x[1]), reverse = True)
-	for word_and_count in most_frequent_words_list:
-		if word_and_count[1]*1.0/listLength>.8:
-			return word_and_count[0].strip().title()
-	return most_frequent_words_list[0][0].strip().title()
-
 @app.route('/cluster/getClustersInfo', methods = ['POST'])
 @cross_origin()
 def getClustersInfo():
 	payload = ast.literal_eval(request.data)
+	# payload = {"source":"All Merged","version":"1.0"}
 	source = payload['source']
 	version = payload['version']
 	queryDict = {"source":source,"version":version}
-
-	if payload.get('segment'):
-		if payload['segment'].lower() == 'misc':
-			queryDict.update({'segment': {'$in': [None, '', 'Do Not Use']}})
-		else:
-			queryDict.update({'segment': payload['segment']})
 
 	opData = {"name" : "bubble","children" : []}
 
@@ -378,11 +226,12 @@ def getClustersInfo():
 			minRange = int(clusterRange.split("+")[0])
 			pipeline.append({"$match":{"count":{"$gte":minRange}}})
 
-	pipeline.extend([{"$sort":{"count":-1}},{"$limit":200 }])
+	pipeline.extend([{"$sort":{"count":-1}},{"$limit":250}])
 	
 	clusterCount = db.LinkageOp1.aggregate(pipeline)
 	idCount = 0
 	for doc in clusterCount:
+		clusterName = ""
 		score = 0.0
 		currentDocId = doc["_id"]
 		idCount = idCount + 1
@@ -392,26 +241,49 @@ def getClustersInfo():
 		opDNBNameDict = {}
 		revenue = 0
 		noOfC = 0
-		# Getting single CST as clusterElement in this loop
-		for clusterElement in db.LinkageOp1.find({"source":source, "version":version, "clusterId":currentDocId}):
-			if 'revenue' in clusterElement and clusterElement['revenue'] is not None:
-				revenue += clusterElement['revenue']
 
-			if 'customer' in clusterElement and clusterElement['customer'] is not None:
-				noOfC += len(clusterElement['customer'])
+		# We are doing it by aggregate - so it will take less time to show up
+		aggregatedResult = list(db.LinkageOp1.aggregate([
+			{"$match":{"source":source,"version":version,"clusterId":currentDocId}},
+			{
+				"$group":
+				{	
+					"_id":"$clusterId",
+					"revenue":{"$sum":"$revenue"},
+					"revenue2015":{"$sum":"$revenue2015"},
+					"count":{"$sum":1},
+					"cList" : {"$addToSet":"$customer.cNum"},
+					"cstNameList":{"$push":"$cstName"},
+					"dnbNameList":{"$push":"$globalUltDunsName"},
+					"dnbNumList":{"$push":"$globalUltDunsNum"},
+					"validationDate":{"$first":"$validationDate"},
+					"isVerified":{"$first":"$isVerified"}
+				}
+			}
+		]))[0]
 
-			opNameList.append(clusterElement['cstName'])
-			if 'globalUltDunsName' in clusterElement:
-				if clusterElement['globalUltDunsName'] is not None and clusterElement['globalUltDunsName'] != "" and clusterElement['globalUltDunsName'] != "Unknown":
-					opDNBNameList.append(clusterElement['globalUltDunsName'])
-					if clusterElement['globalUltDunsName'] not in opDNBNameDict:
-						opDNBNameDict[clusterElement['globalUltDunsName']] = 0
-					opDNBNameDict[clusterElement['globalUltDunsName']] += 1
+		clusterType = ""
+		listLength = aggregatedResult['count']
+		opDNBNumList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNumList'])
+		opDNBNameList = filter(lambda x:x!=None and x!="",aggregatedResult['dnbNameList'])
+		opNameList = filter(lambda x:x!=None and x!="",aggregatedResult['cstNameList'])
+		noOfC = len(aggregatedResult['cList'])
+		# revenue = aggregatedResult['revenue2015']
+		revenue2015 = aggregatedResult['revenue2015']
+		isVerified = aggregatedResult['isVerified']
+		validationDate = aggregatedResult['validationDate']
 
-			if 'globalUltDunsNum' in clusterElement:
-				if clusterElement['globalUltDunsNum'] is not None and clusterElement['globalUltDunsNum'] != "":
-					opDNBNumList.append(clusterElement['globalUltDunsNum'])
-		
+		if len(opDNBNumList)<=1:
+			clusterType = "E1 Cluster"
+		else:
+			clusterType = "E1 DnB Cluster"
+
+
+		for nameDnB in opDNBNameList:
+			if nameDnB not in opDNBNameDict:
+				opDNBNameDict[nameDnB] = 0
+			opDNBNameDict[nameDnB] += 1
+
 		if len(opDNBNameList)>0:
 			if len(list(set(opDNBNameList))) == 1:
 				clusterName = opDNBNameList[0]
@@ -424,16 +296,15 @@ def getClustersInfo():
 					if maxValue*1.0/totalLengthValues>0.7:
 						clusterName = maxKey
 		else:
-			clusterName = ""
+			clusterName = ''
 
-		if len(opDNBNumList)>0:
-			score = 100.0/len(list(set(opDNBNumList)))
-
-		listLength = len(opNameList)
-		if clusterName == "":
+		if clusterName == '':
 			clusterName = getMostFrequentWord(opNameList)
+
 		clusterSize = listLength
-		singleCluster = {"name" : clusterName,"revenue":revenue,"noOfC":noOfC,"children" : [{"cluster" : idCount,"score" : score,"name" : clusterName,"value" : clusterSize,"id" : currentDocId}]}
+		singleCluster = {"name" : clusterName,"revenue2015":revenue2015,
+		"noOfC":noOfC,"children" : [{"cluster" : idCount,"name" : clusterName,
+		"value" : clusterSize,"id" : currentDocId,"validationDate":validationDate,"isVerified":isVerified,"clusterType":clusterType}]}
 		opData["children"].append(singleCluster)
 
 	return jsonify(**opData)
@@ -579,23 +450,33 @@ def getClusterTablesInfo():
 		misc_list = [None, '', 'Do Not Use']
 		col = db.LinkageOp1
 		opData = {}
-		for source in col.distinct("source"):
+		for source in db.LinkageOp1.distinct("source"):
 			opData[source] = col.find({"source":source}).distinct("version")
-			#data = {}
-			#for version in col.find({"source":source}).distinct("version"):
-				#data['version'] = version
-				#s = set(map(
-				#   lambda x: x['segment'], col.find({
-				#   "source":source, 
-				#   "version": version}, {'_id':0, 'segment':1})))
-				#s = list(set([i if not i in misc_list else 'Misc' for i in s]))
-				#data['segment'] = s
-				#opData[source].append(data)
 	except Exception as err:
 		print(traceback.format_exc())
 
 	return jsonify({'data':opData})
-	
+
+@app.route('/logo/traceability', methods = ['POST'])
+@cross_origin()
+def getTraceability():
+	payload = ast.literal_eval(request.data)
+	# payload = {"source":"E1 DnB Clustered","version":"5.0 - All Data","clusterId":"DNB001367960","cstNum":"4434076"}
+	source = payload['source']
+	version = payload['version']
+	cstNum = payload['cstNum']
+	clusterId = payload['clusterId']
+
+	queryDict = {"source":source,"version":version,"cstNum":cstNum,"clusterId":clusterId}
+	e1ClusterId = db.LinkageOp1.find_one(queryDict,{"e1ClusterId":1,"_id":0})['e1ClusterId']
+	opData = []
+	if e1ClusterId is not None:
+		queryDict.pop("cstNum")
+		queryDict['e1ClusterId'] = e1ClusterId
+		opData = list(db.LinkageOp1.find(queryDict,{"cstName":1,"cstNum":1,"globalUltDunsName":1,"globalUltDunsNum":1,"_id":0,"address":1}))
+	return jsonify(**{"data":opData})
+
+
 
 @app.route('/cluster/getClustersList', methods = ['POST'])
 @cross_origin()
@@ -610,51 +491,27 @@ def getClustersList():
 		noOfC = 0
 		if 'customer' in doc and doc['customer'] is not None:
 			noOfC = len(doc['customer'])
-		revenue = ""
-		if 'revenue' in doc:
-			revenue = doc['revenue']
 
-		#To get city 
-		try:
-			#if customer
-			cstCity = doc.get('customer', [{}])[0].get('cCity', '') 
-			#if no customer
-			if not cstCity:
-				if doc.get('stateProvAbb', ''):
-					indx = doc.get('address', '').split(',').index(doc['stateProvAbb'])
-					cstCity = doc.get('address', '').split(',')[indx-1]
-				else:
-					cstCity = ''
-		except Exception as err:
-			cstCity = ''
-
-		singleCstData = {"cstName":doc['cstName'],
+		singleCstData = {
+						"cstName":doc['cstName'],
+						"globalUltDunsNum":doc['globalUltDunsNum'],
 						"cstNum":doc['cstNum'],
-						"revenue":revenue,
+						"globalUltDunsName":doc['globalUltDunsName'],
+						"dunsNum":doc["dunsNum"],
+						"dunsName":doc["dunsName"],
+						"revenue":doc['revenue'],
+						"revenue2015":doc['revenue2015'],
 						"noOfC":noOfC,
-						"cstState": doc.get('stateProvAbb', ''),
-						"cstCity": cstCity
+						"cstState": doc['stateProvAbb'],
+						"cstCity": doc['cstCity'],
+						"segment": doc['segment'],
+						"salesPerson": doc.get("salesPerson",""),
+						"serviceTeamName": doc.get("serviceTeamName",""),
+						"address" : doc['address'],
 						}
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
-def getCleanClusterName(textName):
-	textName = " " + textName.upper() + " "
-	mapping = db.Mapping
-	suffixMappers =  list(mapping.find({'mappingCategory':'suffixMapper'}))
-
-	for suffixMapper in suffixMappers:
-		key = suffixMapper['suffixKey']
-		value = suffixMapper['suffixValue']
-		textName = textName.replace(key,value)
-
-	suffixRemovers =  list(mapping.find({'mappingCategory':'suffixRemover'}))
-
-	for suffixRemover in suffixRemovers:
-		suffix = suffixRemover['suffix']
-		textName.replace(suffix, " ")
-	
-	return textName.strip()
 
 def summaryData(queryDict, **kwargs):
 	"""
@@ -665,17 +522,16 @@ def summaryData(queryDict, **kwargs):
 	clusterData = {}
 	print queryDict
 	try:
-		#db = MongoClient().testdb.testcol
 		col = db.LinkageOp1
 		csts = list(list(col.aggregate([
 				{'$match': queryDict},
 				{'$group': {'_id': '',
 					'all': {'$push': '$cstNum'},
-					'unique': {'$addToSet': '$cstNum'}}}])))[0]
+					'unique': {'$addToSet': '$cstNum'}}}])))
+		csts = csts[0]
 
 		clusterData['noOfCSTs'] = len(csts['all'])
 		clusterData['noOfCstDups'] = clusterData['noOfCSTs'] - len(csts['unique'])
-		#cst count
 		"""
 		clusterData['noOfCSTs'] = col.count(queryDict)
 		#Duplicate
@@ -736,11 +592,24 @@ def summaryData(queryDict, **kwargs):
 		clusterData['noOfAffNum'] = len(all_aff)
 		clusterData['noOfAffNumDups'] = clusterData['noOfAffNum'] - len(set(all_aff))
 												
-		clusterData['revenue'] = list(col.aggregate([
+		clusterData['revenue2015'] = list(col.aggregate([
 								{'$match': queryDict}, 
 								{'$group':
-									{'_id':'', 'revenue': 
-									{'$sum':'$revenue'}}}]))[0]['revenue']
+									{'_id':'', 'revenue2015': 
+									{'$sum':'$revenue2015'}}}]))[0]['revenue2015']
+		"""
+		clusterData['revenue2014'] = list(col.aggregate([
+								{'$match': queryDict}, 
+								{'$group':
+									{'_id':'', 'revenue2014': 
+									{'$sum':'$revenue2014'}}}]))[0]['revenue2014'] or ""
+
+		clusterData['revenue2013'] = list(col.aggregate([
+								{'$match': queryDict}, 
+								{'$group':
+									{'_id':'', 'revenue2013': 
+									{'$sum':'$revenue2013'}}}]))[0]['revenue2013'] or ""
+		"""
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
 											lambda x:int(x['yr3BaseSaleAmt']), 
@@ -754,6 +623,19 @@ def summaryData(queryDict, **kwargs):
 									'cPhone':{'$addToSet': '$customer.cPhone'}, 
 									'cAddress':{'$addToSet':'$customer.cAddress'}}}]))[0]
 
+		#No of invalid emails
+		email_pattern = re.compile(mapping.email_pattern)
+		clusterData['num_invalid_email'] = len(custData['cEmail']) - len(
+															filter(lambda x:x, map(
+																lambda x:re.match(
+																	email_pattern,x), custData['cEmail'])))
+		#No of invalid numbers
+		phone_pattern = re.compile(mapping.phone_pattern)
+		clusterData['num_invalid_phone'] = len(custData['cPhone']) - len(
+															filter(lambda x:x, map(
+																lambda x:re.match(
+																	phone_pattern,x), custData['cPhone'])))
+
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
 			clusterData['noOf'+itm.lstrip('c')] = len(
 				filter(lambda x:x, custData[itm]))
@@ -765,7 +647,7 @@ def summaryData(queryDict, **kwargs):
 		#clusterData['addresses'] = len(
 		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
 	except IndexError as err:
-		import tracback
+		import traceback
 		print(traceback.format_exc())
 		clusterData = {"noOfCSTs": "",
 						"noOfCstDups": "",
@@ -773,7 +655,7 @@ def summaryData(queryDict, **kwargs):
 						"noOfCDups": "",
 						"noOfLes": "",
 						"noOfLeDups": "", 
-						"revenue": "", 
+						"revenue2015": "", 
 						"noOfEmail": "", 
 						"noOfAddress": "", 
 						"noOfPhone": ""}
@@ -784,6 +666,95 @@ def summaryData(queryDict, **kwargs):
 		import traceback
 		print traceback.format_exc()
 	return clusterData
+
+# Do not make genearlized function until required
+# Try to optimize the query and do not use aggregate like this
+# For one task one aggregate function
+# def summaryData(queryDict, **kwargs):
+# 	"""
+# 		summary endpoints call this method
+# 			:Parameters:
+# 				queryDict: a dictionary to query from mongoDB
+# 	"""
+# 	clusterData = {}
+# 	print queryDict
+# 	try:
+# 		# db = MongoClient().testdb.testcol
+# 		col = db.LinkageOp1
+# 		# cst count
+# 		clusterData['noOfCSTs'] = col.count(queryDict)
+# 		# duplicate
+# 		clusterData['noOfCstDups'] = (clusterData['noOfCSTs'] -
+# 										 len(list(col.aggregate([{
+# 										'$match': queryDict}, 
+# 										{'$group': {'_id': 'null',
+# 										'items': {'$addToSet': 
+# 										"$cstNum"}}}]))[0]['items']))
+# 		# c count
+# 		clusterData['noOfCs'] = list(col.aggregate([
+# 							{'$match': queryDict},
+# 							{'$unwind': "$customer"},
+# 							{'$project': {'count': {'$add':1}}},
+# 							{'$group':
+# 								{'_id': 'null', 'number': 
+# 									{'$sum': "$count"}}}]))[0]['number']
+# 		# duplicate
+# 		clusterData['noOfCDups'] = (clusterData['noOfCs']-
+# 										len(list(col.aggregate([
+# 											{'$match': queryDict},
+# 											{'$group': {'_id': 'null', 'items':
+# 											{'$addToSet': "$customer.cNum"}}}]))[0]['items']))
+												
+# 		clusterData['revenue'] = list(col.aggregate([
+# 								{'$match': queryDict}, 
+# 								{'$group':
+# 									{'_id':'', 'revenue': 
+# 									{'$sum':'$revenue'}}}]))[0]['revenue']
+# 		if kwargs.get('is_map'):
+# 			clusterData['yr3BaseSaleAmt'] = sum(map(
+# 											lambda x:int(x['yr3BaseSaleAmt'] if x['yr3BaseSaleAmt'] is not None else 0), 
+# 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
+
+# 		for itm in ['cEmail', 'cAddress', 'cPhone']:
+# 			clusterData['noOf'+itm.lstrip('c')] = len(
+# 				filter(lambda x: x, col.distinct('customer.'+itm, queryDict)))
+# 		#clusterData['addresses'] = len(
+# 		#    filter(lambda x: x, col.distinct('c.cAddress', {'clusterId':1})))
+# 	except IndexError as err:
+# 		print err
+# 		clusterData = {"noOfCSTs": "",
+# 						"noOfCstDups": "",
+# 						"noOfCs": "",
+# 						"noOfCDups": "", 
+# 						"revenue": "", 
+# 						"noOfEmail": "", 
+# 						"noOfAddress": "", 
+# 						"noOfPhone": ""}
+# 		if kwargs.get('is_map'):
+# 			clusterData.update({'yr3BaseSaleAmt': ""})
+
+# 	except Exception as err:
+# 		import traceback
+# 		print traceback.format_exc()
+# 	return clusterData
+
+def getCleanClusterName(textName):
+	textName = " " + textName.upper() + " "
+	mapping = db.Mapping
+	suffixMappers =  list(mapping.find({'mappingCategory':'suffixMapper'}))
+
+	for suffixMapper in suffixMappers:
+		key = suffixMapper['suffixKey']
+		value = suffixMapper['suffixValue']
+		textName = textName.replace(key,value)
+
+	suffixRemovers =  list(mapping.find({'mappingCategory':'suffixRemover'}))
+
+	for suffixRemover in suffixRemovers:
+		suffix = suffixRemover['suffix']
+		textName.replace(suffix, " ")
+	
+	return textName.strip()
 
 @app.route('/logo/summary', methods=['POST'])
 @cross_origin()
@@ -808,6 +779,8 @@ def getSummary():
 
 	data = summaryData(queryDict = queryDict)	
 	response_data['summary'] = data
+	#non-ct business location count
+	response_data['summary']['nonCtCount'] = nonCtBusinessLocationCount(queryDict) 
 
 	col = db.LinkageOp1
 	clusterName = col.find_one(queryDict)['clusterName']
@@ -822,7 +795,7 @@ def getSummary():
 	#FOR PI CHART By Segment
 	pipeline = [
 		{'$match': queryDict},
-		{'$group': {'_id': '$segment', 'count': {'$sum':1}, 'revenue': {'$sum': '$revenue'}}}]
+		{'$group': {'_id': '$segment', 'count': {'$sum':1}, 'revenue2015': {'$sum': '$revenue2015'}}}]
 	data = list(col.aggregate(pipeline))
 
 	new_data = {}
@@ -830,13 +803,24 @@ def getSummary():
 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
 		new_data[sg['_id']] = {}
 		new_data[sg['_id']]['segment'] = new_data.get(sg['_id'], {}).get('segment', 0) + sg['count']
-		new_data[sg['_id']]['revenue'] = new_data.get(sg['_id'], {}).get('revenue', 0) + sg['revenue']
-	response_data['pie'] = new_data
+		new_data[sg['_id']]['revenue2015'] = new_data.get(sg['_id'], {}).get('revenue2015', 0) + sg['revenue2015']
+
+	pieRevenueData = []
+	pieSegmentData = []
+	for k,v in new_data.iteritems():
+		name = k
+		revenue2015 = v['revenue2015']
+		segment = v['segment']
+		pieRevenueData.append({"name":name,"val":revenue2015})
+		pieSegmentData.append({"name":name,"val":segment})
+
+	response_data['pie'] = pieSegmentData
+	response_data['pieRev'] = pieRevenueData
 
 	#PI chart segment revenue
 	pipeline = [
 		{'$match': queryDict},
-		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
+		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue2015'}}}]
 	data = list(col.aggregate(pipeline))
 
 	"""
@@ -850,7 +834,7 @@ def getSummary():
 
 	#FOR MAP SUMMARY
 	data = []
-	states = col.distinct('stateProvAbb', {'clusterId': clusterId})
+	states = col.distinct('stateProvAbb', queryDict)
 	for state in states:
 		queryDict.update({'stateProvAbb': state})
 		dt = summaryData(queryDict = queryDict, is_map=True)
@@ -861,24 +845,96 @@ def getSummary():
 	return jsonify({'data': response_data})
 
 
-@app.route('/logo/allcst', methods=['POST'])
+# @app.route('/logo/summary', methods=['POST'])
+# @cross_origin()
+# def getSummary():
+# 	"""
+# 		returns summary of a cluster
+# 	"""
+# 	response_data = {}
+# 	queryDict = {}
+# 	payload = ast.literal_eval(request.data)
+# 	# We require these 3 data as it is not optional
+# 	# We can pass a message to API if these call is not valid
+
+# 	clusterId = payload['clustId']
+# 	queryDict.update({'clusterId': clusterId})
+
+# 	if payload.get('source', ''):
+# 		queryDict.update({'source': payload.get('source', '')})
+
+# 	if payload.get('version', ''):
+# 		queryDict.update({'version': payload.get('version', '')})
+
+# 	data = summaryData(queryDict = queryDict)	
+# 	response_data['summary'] = data
+
+# 	col = db.LinkageOp1
+# 	clusterName = col.find_one(queryDict)['clusterName']
+
+# 	cleanClusterName = getCleanClusterName(clusterName)
+
+# 	names = map(lambda x: x['cstName'], list(col.find(queryDict, {'cstName':1,'_id':0})))
+# 	frequentName = getMostFrequentWord(names)
+
+# 	response_data['searchTerm'] = '"' + cleanClusterName + '"' + ' ' + '"' + frequentName + '"'
+
+# 	#FOR Pie CHART By Segment
+# 	pipeline = [
+# 		{'$match': queryDict},
+# 		{'$group': {'_id': '$segment', 'count': {'$sum':1}}}]
+
+# 	data = list(col.aggregate(pipeline))
+# 	new_data = []
+# 	# Adding Misc. for some of the category
+# 	for sg in data:
+# 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+# 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+# 	response_data['pie'] = new_data
+
+# 	#Pie Chart Segment Revenue
+# 	pipeline = [
+# 		{'$match': queryDict},
+# 		{'$group': {'_id': '$segment', 'count': {'$sum': '$revenue'}}}]
+# 	data = list(col.aggregate(pipeline))
+# 	new_data = []
+# 	for sg in data:
+# 		sg['_id'] = 'misc' if sg['_id'] in ['',None,'Do Not Use'] else sg['_id']
+# 		new_data.append({'name':sg['_id'], 'val' : sg['count']})
+# 	response_data['pieRev'] = new_data
+
+# 	#FOR MAP SUMMARY
+# 	data = []
+# 	for state in col.distinct('stateProvAbb', {'clusterId': clusterId}):
+# 		queryDict.update({'stateProvAbb': state})
+# 		# Need to change it over here
+# 		dt = summaryData(queryDict = queryDict, is_map=True)
+# 		dt.update({'state':state})
+# 		data.append(dt)
+# 	response_data['map'] = data
+
+# 	return jsonify({'data': response_data})
+
+
+@app.route('/logo/ctbusinesslocation', methods=['POST'])
 @cross_origin()
-def get_cst_by_cluster():
+def ctBusinessLocation():
 	queryDict = {}
 	# payload = json.loads(ast.literal_eval(request.data)['data'])
 	payload = ast.literal_eval(request.data)
-	clusterId = payload['clustId']
+	clusterId = payload['clusterId']
 
 	queryDict.update({'clusterId': clusterId})
 
 	if payload.get('source', ''):
-		queryDict.update({'source': payload.get('source', '').capitalize()})
+		queryDict.update({'source': payload.get('source', '')})
 
 	if payload.get('version', ''):
 		queryDict.update({'version': payload.get('version', '')})
-	print(queryDict)
+
 	col = db.LinkageOp1
 	response_data = []
+
 	for cst in col.find(queryDict, {'customer': 0, '_id':0}):
 		if cst.get('yr3BaseSaleAmt',None) is not None and int(cst['yr3BaseSaleAmt']) == 0:
 			cst['yr3BaseSaleAmt'] = ""
@@ -895,6 +951,158 @@ def get_cst_by_cluster():
 		response_data.append(cst)
 	return jsonify({'data': response_data})
 
+#@app.route('/logo/nonctbusinesslocation', methods=['POST'])
+#@cross_origin()
+def nonCtBusinessLocationCount(queryDict):
+	try:
+		col = db.LinkageOp1
+		colDuns = db.Duns
+
+		#payload = ast.literal_eval(request.data)
+		#clusterId = payload['clusterId']
+		#queryDict = {'clusterId': clusterId}
+
+		#if payload.get('source'):
+		#	queryDict['source'] = payload['source']
+		#if payload.get('version'):
+		#	queryDict['version'] = payload['version']
+		"""
+			cluster
+			all csts
+			get globutldunsnum
+			query Duns table insert all the results into a list
+			remove duns results with duns num in lop table
+		"""
+		response_data = []
+		
+		csts = list(col.find(queryDict))
+		cstDuns = list(set(map(lambda x:x['dunsNum'], csts))) #unique
+		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
+		
+		duns = dict(
+				map(lambda x:(x['dunsNum'], x), 
+					colDuns.find({'globalUltDunsNum': {'$in': glbUltDunsNums}})))
+		#only get those duns which are not present in linkageop1 result
+		filtered_duns = [duns.pop(cd) for cd in cstDuns if duns.get(cd)]
+		#filtered_duns = map(lambda x: not duns.get(x), duns)
+		for data in duns.values():
+			tmp = {}
+			tmp['dunsName'] = data['dunsName']
+			tmp['dunsNum'] = data['dunsNum']
+			tmp['cityName'] = data['cityName']
+			tmp['stateProvAbb'] = data['stateProvAbb']
+			tmp['yr3EmployeeCount'] = data['yr3EmployeeCount']
+			tmp['yr3BaseSaleAmt'] = data['yr3BaseSaleAmt']
+			tmp['globalUltDunsName'] = data['globalUltDunsName']
+			response_data.append(tmp)
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+	#return jsonify({'data': response_data})
+	return "{0}/{1}".format(len(cstDuns), len(response_data))
+
+
+@app.route('/logo/crecord', methods=['POST'])
+@cross_origin()
+def cRecord():
+	try:
+		col = db.LinkageOp1
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+
+		response_data = []
+		for data in col.find(queryDict):
+			customers = data['customer']
+			if customers is not None:
+				for customer in customers:
+					tmp = {}
+					tmp['cstNum'] = data['cstNum']
+					tmp['cstName'] = data['cstName']
+					# Added Field in Data
+					tmp['cName'] = customer.get('cName','')
+					tmp['cCity'] = customer['cCity']
+					tmp['cNum'] = customer['cNum']
+					tmp['cAddress'] = customer['cAddress']
+					tmp['cEmail'] = customer['cEmail']
+					tmp['cPhone'] = customer['cPhone']
+					response_data.append(tmp)
+			
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = []
+	return jsonify({'data': response_data})
+
+@app.route('/logo/ctservicedetails', methods=['POST'])
+@cross_origin()
+def ctServiceDetails():
+	col = db.LinkageOp1
+	colService = db.ServiceRevenueDetails
+	payload = ast.literal_eval(request.data)
+	# payload = {"source":"E1 DnB Clustered","version":"5.0 - All Data","clusterId":"DNB001367960"}
+	clusterId = payload['clusterId']
+	queryDict = {'clusterId': clusterId}
+
+	if payload.get('source'):
+		queryDict['source'] = payload['source']
+	if payload.get('version'):
+		queryDict['version'] = payload['version']
+
+	cstNums = []
+	for data in col.find(queryDict,{'_id':0,'cstNum':1}):
+		cstNums.append(data['cstNum'])
+	response_data = list(colService.find({"cstNum":{"$in":cstNums},"serviceTeamNumber":{"$ne":None}},{"_id":0}))
+	
+	return jsonify({'data': response_data})
+
+
+@app.route('/logo/ctlegalentity', methods=['POST'])
+@cross_origin()
+def ctLegalEntities():
+	try:
+		import mapping
+		col = db.LinkageOp1
+		payload = ast.literal_eval(request.data)
+		clusterId = payload['clusterId']
+		queryDict = {'clusterId': clusterId}
+
+		if payload.get('source'):
+			queryDict['source'] = payload['source']
+		if payload.get('version'):
+			queryDict['version'] = payload['version']
+		jurismapper = mapping.jurisMapping
+		response_data = []
+		for data in col.find(queryDict,{'_id':0}):
+			if data['customer'] is not None:
+				for c in data['customer']:
+					if c['legalEntity'] is not None:
+						for le in c['legalEntity']:
+							tmp = {}
+							tmp['entityName'] = le['entityName']
+							tmp['entityNum'] = le['entityNum']
+							tmp['entityType'] = le['entityType']
+							stateProvAbb = le.get('stateProvAbb', '')
+							if stateProvAbb == '':
+								stateProvAbb = jurismapper.get(le['jurisId'], '')
+
+							tmp['state'] = stateProvAbb
+							tmp['affNum'] = le['affNum']
+							tmp['affName'] = le['affName']
+							response_data.append(tmp)
+
+	except Exception as err:
+			import traceback
+			print(traceback.format_exc())
+			response_data = []
+	return jsonify({'data': response_data})
 
 @app.route('/cluster/merge', methods=['POST'])
 @cross_origin()
@@ -903,7 +1111,6 @@ def merge():
 	try:
 		col = db.LinkageOp1
 		payload = ast.literal_eval(request.data)
-		print payload
 		csts = payload['cstList']
 		source = payload['source']
 		version = payload['version']
@@ -937,364 +1144,44 @@ def merge():
 	return jsonify({'data': response})
 
 
-"""
-@app.route('/merge', methods=['POST'])
-@cross_origin()
-def merge():
-	response = {}
 
-	try:
-		payload = ast.literal_eval(request.data)
-		clusts = payload['clustIdList']
+# @app.route('/cluster/merge', methods=['POST'])
+# @cross_origin()
+# def merge():
+# 	response = {}
+# 	try:
+# 		col = db.LinkageOp1
+# 		payload = ast.literal_eval(request.data)
+# 		csts = payload['cstList']
+# 		source = payload['source']
+# 		version = payload['version']
 
-		if isinstance(clusts, str):
-			clusts = list(clusts)
+# 		clusterName = payload.get('clusterName', '')
+# 		clusterId = payload.get('clusterId', '')
 
-		col = db.LinkageOp1
-		col2 = db.userCollection
-		
-		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
-		cond = {'clusterId':{'$in': clusts}}
+# 		# For orphans
+# 		if not clusterId:
+# 			clusterId = 'ORP' + '%.0f' % time.time()
 
-		cond = {'clusterId':{'$in': clusts}}
-		if payload.get('source'):
-			cond['source'] = payload['source']
-		if payload.get('version'):
-			cond['version'] = payload['version']
+# 		#update data
+# 		updateDict = {'clusterId': clusterId}
+# 		if clusterName:
+# 			updateDict.update({'clusterName': clusterName})
 
-		redc = 'function(curr, result) {}'
-		initial = {}
-		data = list(col.group(key, cond, initial, redc))
+# 		if isinstance(clusts, str):
+# 			clusts = list(clusts)
 
-		allCstNum = map(lambda x: x['cstNum'], data)
-		userColObjId = col2.insert({'csts': allCstNum})
+# 		queryDict = {"source":source,"version":version,'cstNum':{'$in': csts}}
 
-		cid_e1cid = filter(lambda x: x[0], map(
-			lambda x: (x['clusterId'],x['e1ClusterId']), data))
-		#if csts belongs to no cluster i.e. clusterId = ''
-		#then set clusterId as some unique value
-		if not cid_e1cid:
-			clusterId = 'SPL' + '%.0f' % time.time()
-			cid_e1cid = [(clusterId, '')]
+# 		cstData = col.find(queryDict)
+# 		for data in cstData:
+# 			col.update_many(queryDict,{'$set': updateDict})
+# 		response = {'response' : 'ok'}
 
-		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
-
-		#store data of merged cluster
-		delete = []
-		names = []
-		final_data = {}
-		for e1cid, each in enumerate(data):
-			queryDict = {'cstNum': each['cstNum']}
-			if payload.get('source'):
-				queryDict.update({'source': payload['source']})
-			if payload.get('version'):
-				queryDict.update({'version': payload['version']})
-			#print each, max_cluster, type(each['cstNum'])
-			col.update(
-				queryDict,
-				{'$set': 
-					{'clusterId': max_cluster[0], 'userClusterId': str(userColObjId)}})
-
-			if not each['clusterId'] == max_cluster[0]:
-				if each.get('dunsName', False):
-					names.append(each['dunsName'])
-
-			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
-		delete = clusts
-		delete.remove(max_cluster[0])
-		final_data['delete'] = delete
-		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
-		#set names
-		if not names:
-			final_data['update']['name'] = ''
-		elif set(names) == 1:
-			final_data['update']['name'] = [names[0]]
-		else:
-			final_data['update']['name'] = getMostFrequentWord(names)
-
-		response = final_data
-
-	except Exception as err:
-		import traceback
-		print (traceback.format_exc())
-		response = {}
-
-	return jsonify({'data': response})
-
-
-@app.route('/split', methods=['POST'])
-@cross_origin()
-def split():
-	try:
-		payload = ast.literal_eval(request.data)
-		csts = payload['cstList']
-		clusterId = payload['clusterId']
-		queryDict = {'clusterId': clusterId}
-		if payload.get('source'):
-			queryDict['source'] = payload['source']
-		if payload.get('version'):
-			queryDict['version'] = payload['version']
-		#multi = payload.get('multi', True)
-
-		if isinstance(csts, str):
-			csts = list(csts)
-
-		col = db.LinkageOp1
-		col2 = db.userCollection
-
-		delete = []
-		final_data = {}
-		allCsts = map(
-				lambda x: x['cstNum'],
-				col.find(queryDict, {'_id':0, 'cstNum':1}))
-		print allCsts, csts
-		for c in csts:
-			allCsts.remove(c)
-
-		import time
-		userColObjId = col2.insert({'oldClustCsts': allCsts, 'newClustCsts': csts})
-		clusterId = 'SPL' + '%.0f' % time.time()
-		for e1cid, cs in enumerate(csts):
-			#clusterId = 'SPL' + cs
-			delete.append({'csts': cs})
-			query = {'cstNum': cs}
-
-			if payload.get('source'):
-				query['source'] = payload['source']
-			if payload.get('version'):
-				query['version'] = payload['version']
-
-			col.update(
-				query, {'$set':
-				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
-			#clusterid will always be unique
-			#col2.insert({'cstsOld': [cs], 'cstsNew': })
-		
-		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
-
-		final_data['delete'] = delete
-		final_data['name'] = getMostFrequentWord(names)
-		response = final_data
-
-	except Exception as err:
-		import traceback
-		print (traceback.format_exc())
-		response = {}
-
-	return jsonify({'data': response})
-"""	
-	
-@app.route('/logo/dunsall', methods=['POST'])
-@cross_origin()
-def get_dunsall():
-	response_data = {}
-	try:
-		queryDict = {}
-		queryDictDuns = {}
-		queryDictLinkage = {}
-		payload = ast.literal_eval(request.data)
-		#payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
-		clusterId = payload['clustId']
-		globalUltDunsNum = payload['globalUltDunsNum']
-
-		if payload.get('source', ''):
-			queryDict.update({'source': payload.get('source', '').capitalize()})
-
-		if payload.get('version', ''):
-			queryDict.update({'version': payload.get('version', '')})
-
-		queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
-		queryDictLinkage.update({'clusterId': clusterId})
-		queryDictLinkage.update(queryDict)
-
-		colDuns = db.Duns
-		colLinkage = db.LinkageOp1
-
-		dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
-		dataLinkage = list(colLinkage.find(queryDictLinkage))
-
-		tmp = {}
-		#hashmap of index of a perticular dunsNum in dataDuns
-		for idx, d in enumerate(dataDuns):
-			tmp[d['dunsNum']] = idx+1
-
-		index = 0
-		for data in dataLinkage:
-			if tmp.get(data['dunsNum']):
-				if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
-					index += 1
-					dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
-
-				print index, tmp[data['dunsNum']], data['dunsNum']
-		response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
-	except Exception as err:
-		import traceback
-		print(traceback.format_exc())
-		response_data = {'response': {}, 'presentin': '','total': ''}
-	return jsonify({'data': response_data})
-
-
-@app.route('/ctlegalentity', methods=['POST'])
-@cross_origin()
-def ctLegalEntities():
-	try:
-		col = db.LinkageOp1
-
-		payload = ast.literal_eval(request.data)
-		clusterId = payload['clusterId']
-		queryDict = {'clusterId': clusterId}
-
-		if payload.get('source'):
-			queryDict['source'] = payload['source']
-		if payload.get('version'):
-			queryDict['version'] = payload['version']
-
-		response_data = []
-		for data in col.find(queryDict,{'_id':0}):
-			for c in data['customer']:
-				for le in c['legalEntity']:
-					tmp = {}
-					tmp['entityName'] = le['entityName']
-					tmp['corpNum'] = le['entityNum']
-					tmp['state'] = le.get('stateProvAbb', '')
-					tmp['affNum'] = le['affNum']
-					response_data.append(tmp)
-
-	except Exception as err:
-		import traceback
-		print(traceback.format_exc())
-		response_data = []
-	return jsonify({'data': response_data})
-
-@app.route('/ctbusinessloc', methods=['POST'])
-@cross_origin()
-def ctbusinessloc():
-	try:
-		col = db.LinkageOp1
-
-		payload = ast.literal_eval(request.data)
-		clusterId = payload['clusterId']
-		queryDict = {'clusterId': clusterId}
-
-		if payload.get('source'):
-			queryDict['source'] = payload['source']
-		if payload.get('version'):
-			queryDict['version'] = payload['version']
-
-		response_data = []
-		for data in col.find(queryDict):
-			tmp = {}
-			tmp['cstNum'] = data['cstNum']
-			tmp['cstName'] = data['cstName']
-			tmp['globalUltDunsName'] = data['globalUltDunsName']
-			tmp['segment'] = data['segment']
-			tmp['revenue'] = data['revenue']
-			#unique domain
-			domains = {}
-			for c in data.get('customer'):
-				email = c['cEmail']
-				if '@' in email:
-					domain = email.split("@")[1].lower()
-					domains[domain] = True
-			tmp['uniqDomains'] = domains.keys()
-			tmp['globalUltDunsNum'] = data['globalUltDunsNum']
-			tmp['yrStarted'] = data['yrStarted']
-			tmp['address'] = data['address']
-			response_data.append(tmp)
-
-	except Exception as err:
-		import traceback
-		print(traceback.format_exc())
-		response_data = []
-	return jsonify({'data': response_data})
-
-@app.route('/nonctbusinessloc', methods=['POST'])
-@cross_origin()
-def nonCtBusinessLoc():
-	try:
-		col = db.LinkageOp1
-		colDuns = db.Duns
-
-		payload = ast.literal_eval(request.data)
-		clusterId = payload['clusterId']
-		queryDict = {'clusterId': clusterId}
-
-		if payload.get('source'):
-			queryDict['source'] = payload['source']
-		if payload.get('version'):
-			queryDict['version'] = payload['version']
-		"""
-			cluster
-				all csts
-					get globutldunsnum
-						query Duns table insert all the results into a list
-							remove duns results with duns num in lop table
-		"""
-		response_data = []
-		
-		csts = list(col.find(queryDict))
-		cstDuns = list(set(map(lambda x:x['dunsNum'], csts)))
-		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
-		
-		duns = dict(
-				map(lambda x:(x['dunsNum'], x), 
-					colDuns.find({'globalUltDunsNum': {'$in': glbUltDunsNums}})))
-		#only get those duns which are not present in linkageop1 result
-		filtered_duns = [duns.pop(cd) for cd in cstDuns if duns.get(cd)]
-		#filtered_duns = map(lambda x: not duns.get(x), duns)
-		for data in duns.values():
-			tmp = {}
-			tmp['dunsName'] = data['dunsName']
-			tmp['dunsNum'] = data['dunsNum']
-			tmp['cityName'] = data['cityName']
-			tmp['stateProvAbb'] = data['stateProvAbb']
-			tmp['yr3EmployeeCount'] = data['yr3EmployeeCount']
-			tmp['yr3BaseSaleAmt'] = data['yr3BaseSaleAmt']
-			tmp['globalUltDunsName'] = data['globalUltDunsName']
-			response_data.append(tmp)
-
-	except Exception as err:
-		import traceback
-		print(traceback.format_exc())
-		response_data = []
-	return jsonify({'data': response_data})
-
-@app.route('/logo/crecord', methods=['POST'])
-@cross_origin()
-def cRecord():
-	try:
-		col = db.LinkageOp1
-
-		payload = ast.literal_eval(request.data)
-		clusterId = payload['clusterId']
-		queryDict = {'clusterId': clusterId}
-
-		if payload.get('source'):
-			queryDict['source'] = payload['source']
-		if payload.get('version'):
-			queryDict['version'] = payload['version']
-
-		response_data = []
-		for data in col.find(queryDict):
-			cdata = data['customer']
-			for cd in cdata:
-				tmp = {}
-				tmp['cstNum'] = data['cstNum']
-				tmp['cstName'] = data['cstName']
-				#customer data
-				tmp['cName'] = cd.get('cName', '')
-				tmp['cCity'] = cd['cCity']
-				tmp['cNum'] = cd['cNum']
-				tmp['cAddress'] = cd['cAddress']
-				tmp['cEmail'] = cd['cEmail']
-				tmp['cPhone'] = cd['cPhone']
-				response_data.append(tmp)
-
-	except Exception as err:
-		import traceback
-		print(traceback.format_exc())
-		response_data = []
-	return jsonify({'data': response_data})
+# 	except Exception as err:
+# 		print(format_exc())
+# 		response = {'response': 'err'}
+# 	return jsonify({'data': response})
 
 
 @app.route('/logo/search', methods=['POST'])
@@ -1306,24 +1193,32 @@ def search():
 		payload = ast.literal_eval(request.data)
 
 		searchTerm = payload['searchTerm']
-		queryDict = {'clusterName': {'$regex' : searchTerm, '$options':'i' }}
+		source = payload['source']
+		version = payload['version']
+		# queryDict = {'clusterName': {'$regex' : searchTerm ,'$options':'i'}}
 
-		if payload.get('source'):
-			queryDict['source'] = payload['source']
-		if payload.get('version'):
-			queryDict['version'] = payload['version']
+		# if payload.get('source'):
+		# 	queryDict['source'] = payload['source']
+		# if payload.get('version'):
+		# 	queryDict['version'] = payload['version']
 
-		response_data = []
-		datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1}, limit=100))
-		cids = {}
-		for data in datas:
-			if cids.get(data['clusterId']):
-				continue
-			response_data.append(data)
-			cids[data['clusterId']] = True
+		# response_data = []
+		# datas = list(col.find(queryDict, {'_id':0,'clusterId':1,'clusterName':1, 'isVerified':1},limit=200))
+		# cids = {}
+		# for data in datas:
+		# 	if cids.get(data['clusterId']):
+		# 		continue
+		# 	response_data.append(data)
+		# 	cids[data['clusterId']] = True
 
-		if len(response_data) > 15:
-			response_data = response_data[:15]
+		# if len(response_data) > 15:
+		# 	response_data = response_data[:15]
+		response_data = list(col.aggregate([
+			{"$match":{"source":source,"version":version,"clusterName":{"$regex":searchTerm,'$options':'i'}}},
+			{"$group":{"_id":"$clusterId","isVerified":{"$first":"$isVerified"},"clusterId":{"$first":"$clusterId"},"clusterName":{"$first":"$clusterName"},"count":{"$sum":1}}},
+			{"$sort":{"count":-1}},
+			{"$limit":20}]
+			))
 
 	except Exception as err:
 		import traceback
@@ -1332,7 +1227,8 @@ def search():
 
 	return jsonify({'data': response_data})
 
-@app.route('/nonctlegalent', methods=['POST'])
+
+@app.route('/logo/nonctlegalent', methods=['POST'])
 @cross_origin()
 def nonctlegalent():
 	try:
@@ -1358,35 +1254,44 @@ def nonctlegalent():
 		jurismapper = mapping.jurisMapping
 		for cst in csts:
 			customer = cst['customer']
-			for c in customer:
-				if c.get('legalEntity'):
-					le = c['legalEntity']
-					if not le.get('stateProvAbb'):
-						le['stateProvAbb'] = jurismapper.get(le['jurisId'], '')
-					leDict[le['entityNum']] = le
-					#for fast lookup in sos
-					tmpDict[le['stateProvAbb'] + le['entityNum']] = True
+			if customer is not None:
+				for c in customer:
+					if c['legalEntity'] is not None:
+						if c.get('legalEntity'):
+							le = c['legalEntity']
+							for l in le:
+								if not l.get('stateProvAbb'):
+									l['stateProvAbb'] = jurismapper.get(l['jurisId'], '')
+								leDict[l['entityNum']] = l
+								#for fast lookup in sos
+								tmpDict[l['stateProvAbb'] + l['entityNum']] = True
 
 
 		response_data = {}
 		data = []
+		sosmissed = []
 		maps = mapping.names
 		splchar = mapping.splchar
-		missedReps = []
+		missedreps = []
 		for s in sos:
+			s.pop('_id')
+			print s
 			#for l in leDict.keys():
-			if not tmpDict.get(s['filingState'] + s['filingNum']):
-				missedreps.append(leDict.pop(l['entityNum']))
-				#if s['filingNum'] == l['entityNum'] and s['filingState'] == l['stateProvAbb']:
-				#	continue
-				#else:
-			if maps.get(s['BE_NM']):
-				data.append(s)
-			elif filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
-				data.append(s)
+			if maps.get(s['BE_NM']) or filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
+				#data.append(s)
+				if not tmpDict.get(s['filingState'] + s['filingNum']):
+					sosmissed.append(s)
+					#missedreps.append(leDict.pop(s['filingNum']))
+					#leDict.pop(s['filingNum'])
+					#if s['filingNum'] == l['entityNum'] and s['filingState'] == l['stateProvAbb']:
+					#	continue
+					#else:
+				#elif filter(lambda x:x, map(lambda x:re.findall(x, '' if not s['BE_NM'] else s['BE_NM']), splchar)):
+					#data.append(s)
+					#continue
 			else:
-				continue
-		response_data['missedReps'] = missedreps
+				data.append(s)
+		response_data['missedReps'] = sosmissed
 		response_data['sos'] = data
 	except Exception as err:
 		import traceback
@@ -1396,5 +1301,218 @@ def nonctlegalent():
 	return jsonify({'data': response_data})
 
 
+# @app.route('/merge', methods=['POST'])
+# @cross_origin()
+# def merge():
+# 	response = {}
+
+# 	try:
+# 		payload = ast.literal_eval(request.data)
+# 		clusts = payload['clustIdList']
+
+# 		if isinstance(clusts, str):
+# 			clusts = list(clusts)
+
+# 		col = db.LinkageOp1
+# 		col2 = db.userCollection
+		
+# 		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
+# 		cond = {'clusterId':{'$in': clusts}}
+
+# 		cond = {'clusterId':{'$in': clusts}}
+# 		if payload.get('source'):
+# 			cond['source'] = payload['source']
+# 		if payload.get('version'):
+# 			cond['version'] = payload['version']
+
+# 		redc = 'function(curr, result) {}'
+# 		initial = {}
+# 		data = list(col.group(key, cond, initial, redc))
+
+# 		allCstNum = map(lambda x: x['cstNum'], data)
+# 		userColObjId = col2.insert({'csts': allCstNum})
+
+# 		cid_e1cid = filter(lambda x: x[0], map(
+# 			lambda x: (x['clusterId'],x['e1ClusterId']), data))
+# 		#if csts belongs to no cluster i.e. clusterId = ''
+# 		#then set clusterId as some unique value
+# 		if not cid_e1cid:
+# 			clusterId = 'SPL' + '%.0f' % time.time()
+# 			cid_e1cid = [(clusterId, '')]
+
+# 		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
+
+# 		#store data of merged cluster
+# 		delete = []
+# 		names = []
+# 		final_data = {}
+# 		for e1cid, each in enumerate(data):
+# 			queryDict = {'cstNum': each['cstNum']}
+# 			if payload.get('source'):
+# 				queryDict.update({'source': payload['source']})
+# 			if payload.get('version'):
+# 				queryDict.update({'version': payload['version']})
+# 			#print each, max_cluster, type(each['cstNum'])
+# 			col.update(
+# 				queryDict,
+# 				{'$set': 
+# 					{'clusterId': max_cluster[0], 'userClusterId': str(userColObjId)}})
+
+# 			if not each['clusterId'] == max_cluster[0]:
+# 				if each.get('dunsName', False):
+# 					names.append(each['dunsName'])
+
+# 			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
+# 		delete = clusts
+# 		delete.remove(max_cluster[0])
+# 		final_data['delete'] = delete
+# 		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
+# 		#set names
+# 		if not names:
+# 			final_data['update']['name'] = ''
+# 		elif set(names) == 1:
+# 			final_data['update']['name'] = [names[0]]
+# 		else:
+# 			final_data['update']['name'] = getMostFrequentWord(names)
+
+# 		response = final_data
+
+# 	except Exception as err:
+# 		import traceback
+# 		print (traceback.format_exc())
+# 		response = {}
+
+# 	return jsonify({'data': response})
+
+
+# @app.route('/split', methods=['POST'])
+# @cross_origin()
+# def split():
+# 	"""
+# 	Split
+# 	:Parameters:
+# 	multi: if multi is true
+# 			split in multiple clusters i.e set multiple clusterId
+# 		   else
+# 			split with same clusterID
+# 	"""
+# 	try:
+# 		payload = ast.literal_eval(request.data)
+# 		csts = payload['cstList']
+# 		clusterId = payload['clusterId']
+# 		queryDict = {'clusterId': clusterId}
+# 		if payload.get('source'):
+# 			queryDict['source'] = payload['source']
+# 		if payload.get('version'):
+# 			queryDict['version'] = payload['version']
+# 		#multi = payload.get('multi', True)
+
+# 		if isinstance(csts, str):
+# 			csts = list(csts)
+
+# 		col = db.LinkageOp1
+# 		col2 = db.userCollection
+
+# 		delete = []
+# 		final_data = {}
+# 		allCsts = map(
+# 				lambda x: x['cstNum'],
+# 				col.find(queryDict, {'_id':0, 'cstNum':1}))
+# 		print allCsts, csts
+# 		for c in csts:
+# 			allCsts.remove(c)
+
+# 		import time
+# 		userColObjId = col2.insert({'oldClustCsts': allCsts, 'newClustCsts': csts})
+# 		clusterId = 'SPL' + '%.0f' % time.time()
+# 		for e1cid, cs in enumerate(csts):
+# 			#clusterId = 'SPL' + cs
+# 			delete.append({'csts': cs})
+# 			query = {'cstNum': cs}
+
+# 			if payload.get('source'):
+# 				query['source'] = payload['source']
+# 			if payload.get('version'):
+# 				query['version'] = payload['version']
+
+# 			col.update(
+# 				query, {'$set':
+# 				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
+# 			#clusterid will always be unique
+# 			#col2.insert({'cstsOld': [cs], 'cstsNew': })
+
+# 		#REMOVE THIS CODE LATER
+# 		"""else:
+# 				clusterId = 'SPL' + '%.0f' % time.time()
+# 				for e1cid, cs in enumerate(csts):
+# 					delete.append({'clusterId': clusterId})
+# 					col.update({'cstNum': cs}, {'$set':
+# 						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
+# 		"""
+		
+# 		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
+
+# 		final_data['delete'] = delete
+# 		final_data['name'] = getMostFrequentWord(names)
+# 		response = final_data
+
+# 	except Exception as err:
+# 		import traceback
+# 		print (traceback.format_exc())
+# 		response = {}
+
+# 	return jsonify({'data': response})
+	
+# Not required as of now
+# @app.route('/logo/dunsall', methods=['POST'])
+# @cross_origin()
+# def get_dunsall():
+# 	response_data = {}
+# 	try:
+# 		queryDict = {}
+# 		queryDictDuns = {}
+# 		queryDictLinkage = {}
+# 		payload = ast.literal_eval(request.data)
+# 		#payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
+# 		clusterId = payload['clustId']
+# 		globalUltDunsNum = payload['globalUltDunsNum']
+
+# 		if payload.get('source', ''):
+# 			queryDict.update({'source': payload.get('source', '')})
+
+# 		if payload.get('version', ''):
+# 			queryDict.update({'version': payload.get('version', '')})
+
+# 		queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
+# 		queryDictLinkage.update({'clusterId': clusterId})
+# 		queryDictLinkage.update(queryDict)
+
+# 		colDuns = db.Duns
+# 		colLinkage = db.LinkageOp1
+
+# 		dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
+# 		dataLinkage = list(colLinkage.find(queryDictLinkage))
+
+# 		tmp = {}
+# 		#hashmap of index of a perticular dunsNum in dataDuns
+# 		for idx, d in enumerate(dataDuns):
+# 			tmp[d['dunsNum']] = idx+1
+
+# 		index = 0
+# 		for data in dataLinkage:
+# 			if tmp.get(data['dunsNum']):
+# 				if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
+# 					index += 1
+# 					dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
+
+# 				print index, tmp[data['dunsNum']], data['dunsNum']
+# 		response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
+# 	except Exception as err:
+# 		import traceback
+# 		print(traceback.format_exc())
+# 		response_data = {'response': {}, 'presentin': '','total': ''}
+# 	return jsonify({'data': response_data})
+
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
+	# print ctServiceDetails()
