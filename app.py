@@ -601,6 +601,8 @@ def summaryData(queryDict, **kwargs):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
 											lambda x:int(x['yr3BaseSaleAmt']), 
 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
+		email_pattern = re.compile(mapping.email_pattern)
+		clusterData['num_invalid_email'] = len(custData['cEmail']) - len(filter(lambda x:x, map(lambda x:re.match(email_pattern,x), custData['cEmail'])))
 
 		custData = list(col.aggregate([{
 								'$match': queryDict},{
@@ -640,6 +642,23 @@ def summaryData(queryDict, **kwargs):
 		import traceback
 		print traceback.format_exc()
 	return clusterData
+
+def nonCtBusinessLocationCount(queryDict):
+	try:
+		col = db.LinkageOp1
+		colDuns = db.Duns
+		response_data = []
+		csts = list(col.find(queryDict))
+		cstDuns = list(set(map(lambda x:x['dunsNum'], csts))) #unique
+		glbUltDunsNums =  list(set(map(lambda x:x['globalUltDunsNum'], csts)))
+		dunsCount = colDuns.count({'globalUltDunsNum': {'$in': glbUltDunsNums}})
+		response_data = "{0}/{1}".format(len(cstDuns), dunsCount)
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data = ""
+	return response_data
+
 
 # Do not make genearlized function until required
 # Try to optimize the query and do not use aggregate like this
@@ -753,6 +772,7 @@ def getSummary():
 
 	data = summaryData(queryDict = queryDict)	
 	response_data['summary'] = data
+	response_data['summary']['nonCtCount'] = nonCtBusinessLocationCount(queryDict)
 
 	col = db.LinkageOp1
 	clusterName = col.find_one(queryDict)['clusterName']
