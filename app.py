@@ -506,7 +506,8 @@ def getClustersList():
 						"cstCity": doc['cstCity'],
 						"segment": doc['segment'],
 						"salesPerson": doc.get("salesPerson",""),
-						"serviceTeamName": doc.get("serviceTeamName","")
+						"serviceTeamName": doc.get("serviceTeamName",""),
+						"address" : doc['address'],
 						}
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
