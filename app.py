@@ -1513,6 +1513,110 @@ def nonctlegalent():
 # 		response_data = {'response': {}, 'presentin': '','total': ''}
 # 	return jsonify({'data': response_data})
 
+@app.route('/rule/create', methods=['POST'])
+@cross_origin()
+def rule_save():
+	response_data = {}
+	try:
+		col = db.Rules
+
+		payload = ast.literal_eval(request.data)
+
+		rules_data = {
+			'rule' : payload['rule']
+			'source' : payload['source']
+			'version' : payload['version'],
+			'opversion' : payload['opversion'],}
+
+		rule = col.insert_one(rules_data)
+
+		response_data['ruleId'] = rule.inserted_id
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+
+	return jsonify({'data': response_data})
+
+
+@app.route('/rule/list', methods=['POST'])
+@cross_origin()
+def rule_list():
+	response_data = {}
+	try:
+		col = db.Rules
+
+		payload = ast.literal_eval(request.data)
+
+		queryDict = {}
+		queryDict['source'] = payload['source']
+		queryDict['version'] = payload['version']
+		if payload.get('ruleId'):
+			queryDict.update({'_id': payload['ruleId']})
+
+		response_data['rules'] = list(col.find(queryDict))
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+
+	return jsonify({'data': response_data})
+
+
+@app.route('/rule/update', methods=['POST'])
+@cross_origin()
+def rule_update():
+	response_data = {}
+	try:
+		col = db.Rules
+
+		payload = ast.literal_eval(request.data)
+
+		updateDict = {}
+		ruleId = payload['ruleId']
+
+		if payload.get('rule'):
+			updateDict['rule'] = payload.get('rule')
+		if payload.get('source'):
+			updateDict['source'] = payload.get('source')
+		if payload.get('version'):
+			updateDict['version'] = payload.get('version')
+		if payload.get('opversion'):
+			updateDict['opversion'] = payload.get('opversion')
+
+		col.update_one({'_id' : ruleId},{'$set' : updateDict})
+
+		response_data['ruleId'] = ruleId
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+
+	return jsonify({'data': response_data})
+
+
+@app.route('/rule/delete', methods=['POST'])
+@cross_origin()
+def rule_delete():
+	response_data = {}
+	try:
+		col = db.Rules
+
+		payload = ast.literal_eval(request.data)
+		ruleId = payload['ruleId']
+
+		col.remove({'_id': ruleId})
+
+		deleted = col.delete_one(queryDict)
+		response_data['deleted'] = True if  deleted.deleted_count else False
+
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+
+	return jsonify({'data': response_data})
+
+
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
 	# print ctServiceDetails()
