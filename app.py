@@ -1524,9 +1524,10 @@ def rule_save():
 
 		rules_data = {
 			'rule' : payload['rule'],
+			'ruleName' : payload['ruleName'],
 			'source' : payload['source'],
 			'version' : payload['version'],
-			'opversion' : payload['opversion'],}
+			'opVersion' : payload['opVersion'],}
 
 		rule = col.insert_one(rules_data)
 
@@ -1577,16 +1578,20 @@ def rule_update():
 
 		if payload.get('rule'):
 			updateDict['rule'] = payload.get('rule')
+		if payload.get('ruleName'):
+			updateDict['ruleName'] = payload.get('ruleName')
 		if payload.get('source'):
 			updateDict['source'] = payload.get('source')
 		if payload.get('version'):
 			updateDict['version'] = payload.get('version')
-		if payload.get('opversion'):
-			updateDict['opversion'] = payload.get('opversion')
+		if payload.get('opVersion'):
+			updateDict['opVersion'] = payload.get('opVersion')
 
-		col.update_one({'_id' : ruleId},{'$set' : updateDict})
-
-		response_data['ruleId'] = ruleId
+		if updateDict:
+			col.update_one({'_id' : ruleId},{'$set' : updateDict})
+			response_data['ruleId'] = ruleId
+		else:
+			print("No Data passed for update")
 
 	except Exception as err:
 		import traceback
@@ -1601,11 +1606,13 @@ def rule_delete():
 	response_data = {}
 	try:
 		col = db.Rules
+		queryDict = {}
 
 		payload = ast.literal_eval(request.data)
-		ruleId = payload['ruleId']
+		queryDict['_id'] = payload['ruleId']
 
-		col.remove({'_id': ruleId})
+		if payload.get('ruleName'):
+			queryDict['ruleName'] = payload.get('ruleName')
 
 		deleted = col.delete_one(queryDict)
 		response_data['deleted'] = True if  deleted.deleted_count else False
@@ -1619,24 +1626,25 @@ def rule_delete():
 @app.route('/rule/getcloumns')
 @cross_origin()
 def rule_columns():
-    response_data = {}
-    try:
-	col = db.Rules
-        queryDict = {}
-	
-        payload = ast.literal_eval(request.data)
-	queryDict['source'] = payload['source']
-        queryDict['version'] = payload['version']
-        data = col.find_one(queryDict)
-        if data:
-            keys = data[0].keys()
-        else:
-            keys = []
-        response_data['keys'] = keys
-    except Exception as err:
-        import traceback
-        print(traceback.format_exc())
-    return response_data
+	response_data = {}
+	try:
+		col = db.LinkageOp1
+		queryDict = {}
+
+		payload = ast.literal_eval(request.data)
+		queryDict['source'] = payload['source']
+		queryDict['version'] = payload['version']
+
+		data = col.find_one(queryDict)
+		if data:
+			keys = data[0].keys()
+		else:
+			keys = []
+		response_data['keys'] = keys
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+	return response_data
 
 
 if __name__ == '__main__':
