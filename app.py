@@ -1618,7 +1618,7 @@ def rule_delete():
 
 @app.route('/rule/getcloumns')
 @cross_origin()
-def rule_delete():
+def rule_columns():
     response_data = {}
     try:
 	col = db.Rules
