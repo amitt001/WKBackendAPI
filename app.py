@@ -1523,8 +1523,8 @@ def rule_save():
 		payload = ast.literal_eval(request.data)
 
 		rules_data = {
-			'rule' : payload['rule']
-			'source' : payload['source']
+			'rule' : payload['rule'],
+			'source' : payload['source'],
 			'version' : payload['version'],
 			'opversion' : payload['opversion'],}
 
@@ -1615,6 +1615,28 @@ def rule_delete():
 		print(traceback.format_exc())
 
 	return jsonify({'data': response_data})
+
+@app.route('/rule/getcloumns')
+@cross_origin()
+def rule_delete():
+    response_data = {}
+    try:
+	col = db.Rules
+        queryDict = {}
+	
+        payload = ast.literal_eval(request.data)
+	queryDict['source'] = payload['source']
+        queryDict['version'] = payload['version']
+        data = col.find_one(queryDict)
+        if data:
+            keys = data[0].keys()
+        else:
+            keys = []
+        response_data['keys'] = keys
+    except Exception as err:
+        import traceback
+        print(traceback.format_exc())
+    return response_data
 
 
 if __name__ == '__main__':
