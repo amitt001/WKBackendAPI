@@ -1394,7 +1394,7 @@ def rule_delete():
 		payload = ast.literal_eval(request.data)
 		ruleIds = [ObjectId(rid) for rid in payload['ruleId']]
 		deleted = col.remove({'_id' : {'$in': ruleIds}})
-		response_data['deleted'] = True if deleted.deleted_count else False
+		response_data['deleted'] = True if deleted['n'] else False
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
@@ -1439,6 +1439,18 @@ def checkRuleExists():
 		import traceback
 		print(traceback.format_exc())
 	return jsonify({'data': {'ruleExists':ruleExists}})
+
+@app.route('/rule/jobstatus', methods=['POST'])
+@cross_origin()
+def getRuleColumns():
+	response_data = {}
+	try:
+		col = db.Rules
+		queryDict = {}
+		payload = ast.literal_eval(request.data)
+		queryDict['source'] = payload['source']
+		queryDict['version'] = payload['version']
+
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
