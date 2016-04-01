@@ -500,9 +500,9 @@ def getClustersList():
 						"dunsNum":doc["dunsNum"],
 						"dunsName":doc["dunsName"],
 						"revenue":doc['revenue'],
-						"revenue2015":doc['revenue2015'],
-						"revenue2014":doc['revenue2014'],
-						"revenue2013":doc['revenue2013'],
+						"revenue2015": doc.get('revenue2015'),
+						"revenue2014": doc.get('revenue2014'),
+						"revenue2013": doc.get('revenue2013'),
 						"noOfC":noOfC,
 						"cstState": doc['stateProvAbb'],
 						"cstCity": doc['cstCity'],
@@ -511,6 +511,12 @@ def getClustersList():
 						"serviceTeamName": doc.get("serviceTeamName",""),
 						"address" : doc['address'],
 						}
+		if doc.get('revenue2014',0) == 0:
+			revenueChange = "N/A"
+		else:
+			revenueChange = (doc.get('revenue2015',0) - doc.get('revenue2014',0))*100/doc.get('revenue2014',0)
+
+		singleCstData['revenueChange'] = revenueChange
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
