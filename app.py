@@ -487,7 +487,6 @@ def getClustersList():
 	clusterId = payload['clusterId']
 	opList = []
 	for doc in db.LinkageOp1.find({"source":source,"version":version,"clusterId":clusterId}):
-		# Added 3 March 2016 - noOfC and revenue in it
 		noOfC = 0
 		if 'customer' in doc and doc['customer'] is not None:
 			noOfC = len(doc['customer'])
@@ -511,10 +510,10 @@ def getClustersList():
 						"serviceTeamName": doc.get("serviceTeamName",""),
 						"address" : doc['address'],
 						}
-		if doc.get('revenue2014',0) == 0:
+		if doc.get('revenue2014'):
 			revenueChange = "N/A"
 		else:
-			revenueChange = (doc.get('revenue2015',0) - doc.get('revenue2014',0))*100/doc.get('revenue2014',0)
+			revenueChange = (doc.get('revenue2015') - doc.get('revenue2014'))*100.0/doc.get('revenue2014')
 
 		singleCstData['revenueChange'] = revenueChange
 		opList.append(singleCstData)
