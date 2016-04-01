@@ -501,6 +501,8 @@ def getClustersList():
 						"dunsName":doc["dunsName"],
 						"revenue":doc['revenue'],
 						"revenue2015":doc['revenue2015'],
+						"revenue2014":doc.get('revenue2014'),
+						"revenue2013":doc.get('revenue2013'),
 						"noOfC":noOfC,
 						"cstState": doc['stateProvAbb'],
 						"cstCity": doc['cstCity'],
@@ -509,6 +511,12 @@ def getClustersList():
 						"serviceTeamName": doc.get("serviceTeamName",""),
 						"address" : doc['address'],
 						}
+		if doc.get('revenue2014') and doc['revenue2015']:
+			singleCluster['percentageChange'] = (
+				doc['revenue2015'] - doc.get('revenue2014')) / doc.get('revenue2014')
+		else:
+			singleCluster['percentageChange'] = 0
+
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
@@ -597,6 +605,23 @@ def summaryData(queryDict, **kwargs):
 								{'$group':
 									{'_id':'', 'revenue2015': 
 									{'$sum':'$revenue2015'}}}]))[0]['revenue2015']
+
+		clusterData['revenue2014'] = list(col.aggregate([
+								{'$match': queryDict}, 
+								{'$group':
+									{'_id':'', 'revenue2014': 
+									{'$sum':'$revenue2014'}}}]))
+
+		if clusterData['revenue2014']:
+			clusterData['revenue2014'] = clusterData['revenue2014'][0].get('revenue2014')
+
+		#percentage change in revenue
+		if doc.get('revenue2014') and doc['revenue2015']:
+			clusterData['percentageChange'] = (
+				doc['revenue2015'] - doc.get('revenue2014')) / doc.get('revenue2014')
+		else:
+			clusterData['percentageChange'] = 0
+
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
 											lambda x:int(x['yr3BaseSaleAmt']), 
@@ -939,6 +964,14 @@ def ctBusinessLocation():
 
 		if cst.get('globalUltDunsName',None) is not None and cst['globalUltDunsName'] == 'Unknown':
 			cst['globalUltDunsName'] = ""
+
+		if cst.get('revenue2015') and cst.get('revenue2014'):
+			#percentage change in revenue
+			cst['percentageChange'] = (
+				cst['revenue2015'] - cst.get('revenue2014')) / cst.get('revenue2014')
+		else:
+			cst['percentageChange'] = 0
+
 
 		response_data.append(cst)
 	return jsonify({'data': response_data})
