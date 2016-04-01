@@ -491,6 +491,12 @@ def getClustersList():
 		if 'customer' in doc and doc['customer'] is not None:
 			noOfC = len(doc['customer'])
 
+		if doc['revenue2014'] is None:
+			doc['revenue2014'] = 0
+
+		if doc['revenue2015'] is None:
+			doc['revenue2015'] = 0
+
 		singleCstData = {
 						"cstName":doc['cstName'],
 						"globalUltDunsNum":doc['globalUltDunsNum'],
@@ -499,9 +505,9 @@ def getClustersList():
 						"dunsNum":doc["dunsNum"],
 						"dunsName":doc["dunsName"],
 						"revenue":doc['revenue'],
-						"revenue2015": doc.get('revenue2015',0),
-						"revenue2014": doc.get('revenue2014',0),
-						"revenue2013": doc.get('revenue2013',0),
+						"revenue2015": doc['revenue2015'],
+						"revenue2014": doc['revenue2014'],
+						"revenue2013": doc['revenue2013'],
 						"noOfC":noOfC,
 						"cstState": doc['stateProvAbb'],
 						"cstCity": doc['cstCity'],
@@ -510,10 +516,10 @@ def getClustersList():
 						"serviceTeamName": doc.get("serviceTeamName",""),
 						"address" : doc['address'],
 						}
-		if doc.get('revenue2014',0) == 0:
+		if doc['revenue2014'] == 0:
 			revenueChange = "N/A"
 		else:
-			revenueChange = (doc.get('revenue2015',0) - doc.get('revenue2014',0))*100.0/doc.get('revenue2014',0)
+			revenueChange = (doc['revenue2015'] - doc['revenue2014']*100.0/doc['revenue2014'])
 
 		singleCstData['revenueChange'] = revenueChange
 		opList.append(singleCstData)
