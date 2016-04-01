@@ -1329,12 +1329,15 @@ def rule_list():
 	try:
 		col = db.Rules
 		queryDict = {}
-		payload = ast.literal_eval(request.data)
-		if payload.get('ruleId'):
-			ruleId = payload['ruleId']
-			queryDict['_id'] = ObjectId(ruleId)
-
-		response_data['rules'] = list(col.find(queryDict))
+		if request.method == 'POST':
+			payload = ast.literal_eval(request.data)
+			if payload.get('ruleId'):
+				ruleId = payload['ruleId']
+				queryDict['_id'] = ObjectId(ruleId)
+		data = list(col.find(queryDict))
+		for d in data:
+			d['_id']=str(d['_id']) 
+		response_data['rules'] = data
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
