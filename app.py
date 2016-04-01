@@ -501,6 +501,8 @@ def getClustersList():
 						"dunsName":doc["dunsName"],
 						"revenue":doc['revenue'],
 						"revenue2015":doc['revenue2015'],
+						"revenue2014":doc['revenue2014'],
+						"revenue2013":doc['revenue2013'],
 						"noOfC":noOfC,
 						"cstState": doc['stateProvAbb'],
 						"cstCity": doc['cstCity'],
@@ -597,10 +599,22 @@ def summaryData(queryDict, **kwargs):
 								{'$group':
 									{'_id':'', 'revenue2015': 
 									{'$sum':'$revenue2015'}}}]))[0]['revenue2015']
+		clusterData['revenue2014'] = list(col.aggregate([
+								{'$match': queryDict}, 
+								{'$group':
+									{'_id':'', 'revenue2014': 
+									{'$sum':'$revenue2014'}}}]))[0]['revenue2014']
+		clusterData['revenue2013'] = list(col.aggregate([
+								{'$match': queryDict}, 
+								{'$group':
+									{'_id':'', 'revenue2013': 
+									{'$sum':'$revenue2013'}}}]))[0]['revenue2013']
+
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
 											lambda x:int(x['yr3BaseSaleAmt']), 
 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
+		
 		# email_pattern = re.compile(mapping.email_pattern)
 		# clusterData['num_invalid_email'] = len(custData['cEmail']) - len(filter(lambda x:x, map(lambda x:re.match(email_pattern,x), custData['cEmail'])))
 
@@ -613,7 +627,6 @@ def summaryData(queryDict, **kwargs):
 									'cAddress':{'$addToSet':'$customer.cAddress'}}}]))[0]
 
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
-			print "@@@" + itm
 			clusterData['noOf'+itm.lstrip('c')] = len(
 				filter(lambda x:x, custData[itm]))
 		"""
