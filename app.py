@@ -487,10 +487,15 @@ def getClustersList():
 	clusterId = payload['clusterId']
 	opList = []
 	for doc in db.LinkageOp1.find({"source":source,"version":version,"clusterId":clusterId}):
-		# Added 3 March 2016 - noOfC and revenue in it
 		noOfC = 0
 		if 'customer' in doc and doc['customer'] is not None:
 			noOfC = len(doc['customer'])
+
+		if doc['revenue2014'] is None:
+			doc['revenue2014'] = 0
+
+		if doc['revenue2015'] is None:
+			doc['revenue2015'] = 0
 
 		singleCstData = {
 						"cstName":doc['cstName'],
@@ -500,9 +505,9 @@ def getClustersList():
 						"dunsNum":doc["dunsNum"],
 						"dunsName":doc["dunsName"],
 						"revenue":doc['revenue'],
-						"revenue2015":doc['revenue2015'],
-						"revenue2014":doc.get('revenue2014'),
-						"revenue2013":doc.get('revenue2013'),
+						"revenue2015": doc['revenue2015'],
+						"revenue2014": doc['revenue2014'],
+						"revenue2013": doc['revenue2013'],
 						"noOfC":noOfC,
 						"cstState": doc['stateProvAbb'],
 						"cstCity": doc['cstCity'],
@@ -511,12 +516,12 @@ def getClustersList():
 						"serviceTeamName": doc.get("serviceTeamName",""),
 						"address" : doc['address'],
 						}
-		if doc.get('revenue2014') and doc['revenue2015']:
-			singleCluster['percentageChange'] = (
-				doc['revenue2015'] - doc.get('revenue2014')) / doc.get('revenue2014')
+		if doc['revenue2014'] == 0:
+			revenueChange = "N/A"
 		else:
-			singleCluster['percentageChange'] = 0
+			revenueChange = (doc['revenue2015'] - doc['revenue2014'])*100.0/doc['revenue2014']
 
+		singleCstData['revenueChange'] = revenueChange
 		opList.append(singleCstData)
 	return jsonify(**{'data':opList})
 
@@ -530,6 +535,7 @@ def summaryData(queryDict, **kwargs):
 	clusterData = {}
 	print queryDict
 	try:
+		import mapping
 		col = db.LinkageOp1
 		csts = list(list(col.aggregate([
 				{'$match': queryDict},
@@ -550,7 +556,6 @@ def summaryData(queryDict, **kwargs):
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
 		"""
-		#c count
 		"""
 		clusterData['noOfCs'] = list(col.aggregate([
 							{'$match': queryDict},
@@ -605,29 +610,32 @@ def summaryData(queryDict, **kwargs):
 								{'$group':
 									{'_id':'', 'revenue2015': 
 									{'$sum':'$revenue2015'}}}]))[0]['revenue2015']
-
 		clusterData['revenue2014'] = list(col.aggregate([
 								{'$match': queryDict}, 
 								{'$group':
 									{'_id':'', 'revenue2014': 
-									{'$sum':'$revenue2014'}}}]))
+									{'$sum':'$revenue2014'}}}]))[0]['revenue2014']
+		clusterData['revenue2013'] = list(col.aggregate([
+								{'$match': queryDict}, 
+								{'$group':
+									{'_id':'', 'revenue2013': 
+									{'$sum':'$revenue2013'}}}]))[0]['revenue2013']
 
-		if clusterData['revenue2014']:
-			clusterData['revenue2014'] = clusterData['revenue2014'][0].get('revenue2014')
+		if clusterData['revenue2015'] is None or clusterData['revenue2015'] == '':
+			clusterData['revenue2015'] = 0
 
-		#percentage change in revenue
-		if doc.get('revenue2014') and doc['revenue2015']:
-			clusterData['percentageChange'] = (
-				doc['revenue2015'] - doc.get('revenue2014')) / doc.get('revenue2014')
+		if clusterData['revenue2014'] is None or clusterData['revenue2014'] == '':
+			clusterData['revenue2014'] = 0
+
+		if clusterData['revenue2014'] == 0:
+			clusterData['revenueChange'] = "N/A"
 		else:
-			clusterData['percentageChange'] = 0
+			clusterData['revenueChange'] = (clusterData['revenue2015']-clusterData['revenue2014'])*100.0/clusterData['revenue2014']
 
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
 											lambda x:int(x['yr3BaseSaleAmt']), 
 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
-		email_pattern = re.compile(mapping.email_pattern)
-		clusterData['num_invalid_email'] = len(custData['cEmail']) - len(filter(lambda x:x, map(lambda x:re.match(email_pattern,x), custData['cEmail'])))
 
 		custData = list(col.aggregate([{
 								'$match': queryDict},{
@@ -636,6 +644,9 @@ def summaryData(queryDict, **kwargs):
 									'$addToSet': '$customer.cEmail'}, 
 									'cPhone':{'$addToSet': '$customer.cPhone'}, 
 									'cAddress':{'$addToSet':'$customer.cAddress'}}}]))[0]
+
+		email_pattern = re.compile(mapping.email_pattern)
+		clusterData['num_invalid_email'] = len(custData['cEmail']) - len(filter(lambda x:x, map(lambda x:re.match(email_pattern,x), custData['cEmail'])))
 
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
 			clusterData['noOf'+itm.lstrip('c')] = len(
@@ -659,7 +670,11 @@ def summaryData(queryDict, **kwargs):
 						"revenue2015": "", 
 						"noOfEmail": "", 
 						"noOfAddress": "", 
-						"noOfPhone": ""}
+						"noOfPhone": "",
+						"revenueChange" : "",
+						"revenue2014" : "",
+						"revenue2013" : ""
+						}
 		if kwargs.get('is_map'):
 			clusterData.update({'yr3BaseSaleAmt': ""})
 
@@ -965,13 +980,18 @@ def ctBusinessLocation():
 		if cst.get('globalUltDunsName',None) is not None and cst['globalUltDunsName'] == 'Unknown':
 			cst['globalUltDunsName'] = ""
 
-		if cst.get('revenue2015') and cst.get('revenue2014'):
-			#percentage change in revenue
-			cst['percentageChange'] = (
-				cst['revenue2015'] - cst.get('revenue2014')) / cst.get('revenue2014')
-		else:
-			cst['percentageChange'] = 0
+		if cst['revenue2014'] is None:
+			cst['revenue2014'] = 0
 
+		if cst['revenue2015'] is None:
+			cst['revenue2015'] = 0
+
+		if cst['revenue2014'] == 0:
+			revenueChange = "N/A"
+		else:
+			revenueChange = (cst['revenue2015'] - cst['revenue2014'])*100.0/cst['revenue2014']
+
+		cst['revenueChange'] = revenueChange
 
 		response_data.append(cst)
 	return jsonify({'data': response_data})
@@ -1416,7 +1436,6 @@ def rule_update():
 	response_data['updated'] = updated
 	return jsonify({'data': response_data})
 
-
 @app.route('/rule/delete', methods=['POST'])
 @cross_origin()
 def rule_delete():
@@ -1425,13 +1444,30 @@ def rule_delete():
 		col = db.Rules
 		queryDict = {}
 		payload = ast.literal_eval(request.data)
-		ruleIds = [ObjectId(rid) for rid in payload['ruleId']]
+		ruleIds = [ObjectId(rid) for rid in payload['ruleIds']]
 		deleted = col.remove({'_id' : {'$in': ruleIds}})
 		response_data['deleted'] = True if deleted['n'] else False
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
 	return jsonify({'data': response_data})
+
+
+# @app.route('/rule/delete', methods=['POST'])
+# @cross_origin()
+# def rule_delete():
+# 	response_data = {}
+# 	try:
+# 		col = db.Rules
+# 		queryDict = {}
+# 		payload = ast.literal_eval(request.data)
+# 		queryDict['_id'] = ObjectId(payload['ruleId'])
+# 		deleted = col.delete_one(queryDict)
+# 		response_data['deleted'] = True if deleted.deleted_count else False
+# 	except Exception as err:
+# 		import traceback
+# 		print(traceback.format_exc())
+# 	return jsonify({'data': response_data})
 
 @app.route('/rule/getcolumns',methods=['POST'])
 @cross_origin()
@@ -1472,7 +1508,6 @@ def checkRuleExists():
 		import traceback
 		print(traceback.format_exc())
 	return jsonify({'data': {'ruleExists':ruleExists}})
-
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
