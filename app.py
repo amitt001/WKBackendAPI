@@ -1383,7 +1383,6 @@ def rule_update():
 	response_data['updated'] = updated
 	return jsonify({'data': response_data})
 
-
 @app.route('/rule/delete', methods=['POST'])
 @cross_origin()
 def rule_delete():
@@ -1392,13 +1391,30 @@ def rule_delete():
 		col = db.Rules
 		queryDict = {}
 		payload = ast.literal_eval(request.data)
-		queryDict['_id'] = ObjectId(payload['ruleId'])
-		deleted = col.delete_one(queryDict)
-		response_data['deleted'] = True if deleted.deleted_count else False
+		ruleIds = [ObjectId(rid) for rid in payload['ruleIds']]
+		deleted = col.remove({'_id' : {'$in': ruleIds}})
+		response_data['deleted'] = True if deleted['n'] else False
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
 	return jsonify({'data': response_data})
+
+
+# @app.route('/rule/delete', methods=['POST'])
+# @cross_origin()
+# def rule_delete():
+# 	response_data = {}
+# 	try:
+# 		col = db.Rules
+# 		queryDict = {}
+# 		payload = ast.literal_eval(request.data)
+# 		queryDict['_id'] = ObjectId(payload['ruleId'])
+# 		deleted = col.delete_one(queryDict)
+# 		response_data['deleted'] = True if deleted.deleted_count else False
+# 	except Exception as err:
+# 		import traceback
+# 		print(traceback.format_exc())
+# 	return jsonify({'data': response_data})
 
 @app.route('/rule/getcolumns',methods=['POST'])
 @cross_origin()
