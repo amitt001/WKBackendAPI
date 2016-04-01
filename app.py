@@ -2,7 +2,7 @@ from flask import Flask, flash, redirect, url_for, request, get_flashed_messages
 from pymongo import MongoClient
 import pymongo
 import json
-from bson import json_util
+from bson import json_util,ObjectId
 import pycurl, json
 from flask.ext.cors import CORS, cross_origin
 import cStringIO
@@ -1291,218 +1291,151 @@ def nonctlegalent():
 
 	return jsonify({'data': response_data})
 
+# Rules View - APIs
+@app.route('/rule/create', methods=['POST'])
+@cross_origin()
+def rule_save():
+	response_data = {}
+	try:
+		col = db.Rules
 
-# @app.route('/merge', methods=['POST'])
-# @cross_origin()
-# def merge():
-# 	response = {}
+		payload = ast.literal_eval(request.data)
 
-# 	try:
-# 		payload = ast.literal_eval(request.data)
-# 		clusts = payload['clustIdList']
+		rules_data = {
+			'source' : payload['source'],
+			'version' : payload['version'],
+			'opVersion' : payload['opVersion'],
+			'operands' : payload['operands'],
+			'expression' : payload['expression'],
+			'ruleName' : payload['ruleName'],
+			'bracketIds' : payload['bracketIds']
+			}
 
-# 		if isinstance(clusts, str):
-# 			clusts = list(clusts)
+		rule = col.insert_one(rules_data)
+		response_data['createdRule'] = True
+		response_data['ruleId'] = str(rule.inserted_id)
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+		response_data['createdRule'] = False
+		response_data['ruleId'] = ""
+	return jsonify({'data': response_data})
 
-# 		col = db.LinkageOp1
-# 		col2 = db.userCollection
+
+@app.route('/rule/list', methods=['POST'])
+@cross_origin()
+def rule_list():
+	response_data = {}
+	try:
+		col = db.Rules
+		queryDict = {}
+		payload = ast.literal_eval(request.data)
+		if payload.get('ruleId'):
+			ruleId = payload['ruleId']
+			queryDict['_id'] = ObjectId(ruleId)
+
+		response_data['rules'] = list(col.find(queryDict))
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+	return jsonify({'data': response_data})
+
+
+@app.route('/rule/update', methods=['POST'])
+@cross_origin()
+def rule_update():
+	response_data = {}
+	try:
+		col = db.Rules
+		updated = False
+		payload = ast.literal_eval(request.data)
+		ruleId = payload['ruleId']
 		
-# 		key = ['clusterId', 'cstNum', 'e1ClusterId', 'dunsName']
-# 		cond = {'clusterId':{'$in': clusts}}
+		updateDict = {}
+		if payload.get('source'):
+			updateDict['source'] = payload.get('source')
+		if payload.get('version'):
+			updateDict['version'] = payload.get('version')
+		if payload.get('opVersion'):
+			updateDict['opVersion'] = payload.get('opVersion')
+		if payload.get('operands'):
+			updateDict['operands'] = payload['operands']
+		if payload.get('expression'):
+			updateDict['expression'] = payload.get('expression')
+		if payload.get('bracketIds'):
+			updateDict['bracketIds'] = payload.get('bracketIds')
+		if payload.get('ruleName'):
+			updateDict['ruleName'] = payload.get('ruleName')
 
-# 		cond = {'clusterId':{'$in': clusts}}
-# 		if payload.get('source'):
-# 			cond['source'] = payload['source']
-# 		if payload.get('version'):
-# 			cond['version'] = payload['version']
+		if updateDict:
+			col.update_one({'_id' : ObjectId(ruleId)},{'$set' : updateDict})
+			updated = True
+		else:
+			print("No Data passed for update")
 
-# 		redc = 'function(curr, result) {}'
-# 		initial = {}
-# 		data = list(col.group(key, cond, initial, redc))
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
 
-# 		allCstNum = map(lambda x: x['cstNum'], data)
-# 		userColObjId = col2.insert({'csts': allCstNum})
-
-# 		cid_e1cid = filter(lambda x: x[0], map(
-# 			lambda x: (x['clusterId'],x['e1ClusterId']), data))
-# 		#if csts belongs to no cluster i.e. clusterId = ''
-# 		#then set clusterId as some unique value
-# 		if not cid_e1cid:
-# 			clusterId = 'SPL' + '%.0f' % time.time()
-# 			cid_e1cid = [(clusterId, '')]
-
-# 		max_cluster = max(cid_e1cid, key=cid_e1cid[0].count)
-
-# 		#store data of merged cluster
-# 		delete = []
-# 		names = []
-# 		final_data = {}
-# 		for e1cid, each in enumerate(data):
-# 			queryDict = {'cstNum': each['cstNum']}
-# 			if payload.get('source'):
-# 				queryDict.update({'source': payload['source']})
-# 			if payload.get('version'):
-# 				queryDict.update({'version': payload['version']})
-# 			#print each, max_cluster, type(each['cstNum'])
-# 			col.update(
-# 				queryDict,
-# 				{'$set': 
-# 					{'clusterId': max_cluster[0], 'userClusterId': str(userColObjId)}})
-
-# 			if not each['clusterId'] == max_cluster[0]:
-# 				if each.get('dunsName', False):
-# 					names.append(each['dunsName'])
-
-# 			csts = col.distinct('cstNum', {'clusterId': each['clusterId']})
-# 		delete = clusts
-# 		delete.remove(max_cluster[0])
-# 		final_data['delete'] = delete
-# 		final_data['update'] = {'clusterId': max_cluster[0], 'size': e1cid}
-# 		#set names
-# 		if not names:
-# 			final_data['update']['name'] = ''
-# 		elif set(names) == 1:
-# 			final_data['update']['name'] = [names[0]]
-# 		else:
-# 			final_data['update']['name'] = getMostFrequentWord(names)
-
-# 		response = final_data
-
-# 	except Exception as err:
-# 		import traceback
-# 		print (traceback.format_exc())
-# 		response = {}
-
-# 	return jsonify({'data': response})
+	response_data['updated'] = updated
+	return jsonify({'data': response_data})
 
 
-# @app.route('/split', methods=['POST'])
-# @cross_origin()
-# def split():
-# 	"""
-# 	Split
-# 	:Parameters:
-# 	multi: if multi is true
-# 			split in multiple clusters i.e set multiple clusterId
-# 		   else
-# 			split with same clusterID
-# 	"""
-# 	try:
-# 		payload = ast.literal_eval(request.data)
-# 		csts = payload['cstList']
-# 		clusterId = payload['clusterId']
-# 		queryDict = {'clusterId': clusterId}
-# 		if payload.get('source'):
-# 			queryDict['source'] = payload['source']
-# 		if payload.get('version'):
-# 			queryDict['version'] = payload['version']
-# 		#multi = payload.get('multi', True)
+@app.route('/rule/delete', methods=['POST'])
+@cross_origin()
+def rule_delete():
+	response_data = {}
+	try:
+		col = db.Rules
+		queryDict = {}
+		payload = ast.literal_eval(request.data)
+		queryDict['_id'] = ObjectId(payload['ruleId'])
+		deleted = col.delete_one(queryDict)
+		response_data['deleted'] = True if deleted.deleted_count else False
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+	return jsonify({'data': response_data})
 
-# 		if isinstance(csts, str):
-# 			csts = list(csts)
+@app.route('/rule/getcolumns')
+@cross_origin()
+def getRuleColumns():
+	response_data = {}
+	try:
+		col = db.LinkageOp1
+		queryDict = {}
+		payload = ast.literal_eval(request.data)
+		queryDict['source'] = payload['source']
+		queryDict['version'] = payload['version']
 
-# 		col = db.LinkageOp1
-# 		col2 = db.userCollection
+		data = col.find_one(queryDict)
+		if data:
+			keys = data[0].keys()
+		else:
+			keys = []
+		response_data['columns'] = keys
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+	return jsonify({'data': response_data})
 
-# 		delete = []
-# 		final_data = {}
-# 		allCsts = map(
-# 				lambda x: x['cstNum'],
-# 				col.find(queryDict, {'_id':0, 'cstNum':1}))
-# 		print allCsts, csts
-# 		for c in csts:
-# 			allCsts.remove(c)
-
-# 		import time
-# 		userColObjId = col2.insert({'oldClustCsts': allCsts, 'newClustCsts': csts})
-# 		clusterId = 'SPL' + '%.0f' % time.time()
-# 		for e1cid, cs in enumerate(csts):
-# 			#clusterId = 'SPL' + cs
-# 			delete.append({'csts': cs})
-# 			query = {'cstNum': cs}
-
-# 			if payload.get('source'):
-# 				query['source'] = payload['source']
-# 			if payload.get('version'):
-# 				query['version'] = payload['version']
-
-# 			col.update(
-# 				query, {'$set':
-# 				{'clusterId': clusterId, 'userClusterId': str(userColObjId)}})
-# 			#clusterid will always be unique
-# 			#col2.insert({'cstsOld': [cs], 'cstsNew': })
-
-# 		#REMOVE THIS CODE LATER
-# 		"""else:
-# 				clusterId = 'SPL' + '%.0f' % time.time()
-# 				for e1cid, cs in enumerate(csts):
-# 					delete.append({'clusterId': clusterId})
-# 					col.update({'cstNum': cs}, {'$set':
-# 						{'clusterId': clusterId, 'e1ClusterId': str(e1cid)}})
-# 		"""
-		
-# 		names = col.distinct('dunsName',{'cstNum': {'$in': csts}})
-
-# 		final_data['delete'] = delete
-# 		final_data['name'] = getMostFrequentWord(names)
-# 		response = final_data
-
-# 	except Exception as err:
-# 		import traceback
-# 		print (traceback.format_exc())
-# 		response = {}
-
-# 	return jsonify({'data': response})
-	
-# Not required as of now
-# @app.route('/logo/dunsall', methods=['POST'])
-# @cross_origin()
-# def get_dunsall():
-# 	response_data = {}
-# 	try:
-# 		queryDict = {}
-# 		queryDictDuns = {}
-# 		queryDictLinkage = {}
-# 		payload = ast.literal_eval(request.data)
-# 		#payload = {"globalUltDunsNum":"055610216", "clustId": "SPL1457424495" ,"source": "All", "version": "1.0"}
-# 		clusterId = payload['clustId']
-# 		globalUltDunsNum = payload['globalUltDunsNum']
-
-# 		if payload.get('source', ''):
-# 			queryDict.update({'source': payload.get('source', '')})
-
-# 		if payload.get('version', ''):
-# 			queryDict.update({'version': payload.get('version', '')})
-
-# 		queryDictDuns.update({'globalUltDunsNum': globalUltDunsNum})
-# 		queryDictLinkage.update({'clusterId': clusterId})
-# 		queryDictLinkage.update(queryDict)
-
-# 		colDuns = db.Duns
-# 		colLinkage = db.LinkageOp1
-
-# 		dataDuns= list(colDuns.find(queryDictDuns,{'_id':0}))
-# 		dataLinkage = list(colLinkage.find(queryDictLinkage))
-
-# 		tmp = {}
-# 		#hashmap of index of a perticular dunsNum in dataDuns
-# 		for idx, d in enumerate(dataDuns):
-# 			tmp[d['dunsNum']] = idx+1
-
-# 		index = 0
-# 		for data in dataLinkage:
-# 			if tmp.get(data['dunsNum']):
-# 				if not dataDuns[tmp[data['dunsNum']]-1].get('presentInE1', False):
-# 					index += 1
-# 					dataDuns[tmp[data['dunsNum']]-1]['presentInE1'] = True
-
-# 				print index, tmp[data['dunsNum']], data['dunsNum']
-# 		response_data = {'response': dataDuns, 'presentin': index,'total': len(response_data)}
-# 	except Exception as err:
-# 		import traceback
-# 		print(traceback.format_exc())
-# 		response_data = {'response': {}, 'presentin': '','total': ''}
-# 	return jsonify({'data': response_data})
+@app.route('/rule/nameexists')
+@cross_origin()
+def checkRuleExists():
+	response_data = {}
+	try:
+		col = db.Rules
+		queryDict = {}
+		ruleExists = False
+		payload = ast.literal_eval(request.data)
+		queryDict['ruleName'] = payload['ruleName']
+		data = col.find_one(queryDict)
+		if data:
+			ruleExists = True
+	except Exception as err:
+		import traceback
+		print(traceback.format_exc())
+	return jsonify({'data': {'ruleExists':ruleExists}})
 
 if __name__ == '__main__':
 	app.run(host = "0.0.0.0", port = 5111, debug = True)
