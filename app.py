@@ -1322,7 +1322,7 @@ def rule_save():
 	return jsonify({'data': response_data})
 
 
-@app.route('/rule/list', methods=['POST'])
+@app.route('/rule/list', methods=['GET','POST'])
 @cross_origin()
 def rule_list():
 	response_data = {}
