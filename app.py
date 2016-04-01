@@ -519,7 +519,7 @@ def getClustersList():
 		if doc['revenue2014'] == 0:
 			revenueChange = "N/A"
 		else:
-			revenueChange = (doc['revenue2015'] - doc['revenue2014']*100.0/doc['revenue2014'])
+			revenueChange = (doc['revenue2015'] - doc['revenue2014'])*100.0/doc['revenue2014']
 
 		singleCstData['revenueChange'] = revenueChange
 		opList.append(singleCstData)
