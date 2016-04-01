@@ -1392,8 +1392,8 @@ def rule_delete():
 		col = db.Rules
 		queryDict = {}
 		payload = ast.literal_eval(request.data)
-		queryDict['_id'] = ObjectId(payload['ruleId'])
-		deleted = col.delete_one(queryDict)
+		ruleIds = [ObjectId(rid) for rid in payload['ruleId']]
+		deleted = col.remove({'_id' : {'$in': ruleIds}})
 		response_data['deleted'] = True if deleted.deleted_count else False
 	except Exception as err:
 		import traceback
