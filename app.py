@@ -522,6 +522,7 @@ def summaryData(queryDict, **kwargs):
 	clusterData = {}
 	print queryDict
 	try:
+		import mapping
 		col = db.LinkageOp1
 		csts = list(list(col.aggregate([
 				{'$match': queryDict},
@@ -542,7 +543,6 @@ def summaryData(queryDict, **kwargs):
 										'items': {'$addToSet': 
 										"$cstNum"}}}]))[0]['items']))
 		"""
-		#c count
 		"""
 		clusterData['noOfCs'] = list(col.aggregate([
 							{'$match': queryDict},
@@ -613,6 +613,7 @@ def summaryData(queryDict, **kwargs):
 									'cAddress':{'$addToSet':'$customer.cAddress'}}}]))[0]
 
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
+			print "@@@" + itm
 			clusterData['noOf'+itm.lstrip('c')] = len(
 				filter(lambda x:x, custData[itm]))
 		"""
