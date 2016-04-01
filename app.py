@@ -981,15 +981,15 @@ def ctBusinessLocation():
 			cst['globalUltDunsName'] = ""
 
 		if cst['revenue2014'] is None:
-			doc['revenue2014'] = 0
+			cst['revenue2014'] = 0
 
 		if cst['revenue2015'] is None:
-			doc['revenue2015'] = 0
+			cst['revenue2015'] = 0
 
-		if doc['revenue2014'] == 0:
+		if cst['revenue2014'] == 0:
 			revenueChange = "N/A"
 		else:
-			revenueChange = (doc['revenue2015'] - doc['revenue2014'])*100.0/doc['revenue2014']
+			revenueChange = (cst['revenue2015'] - cst['revenue2014'])*100.0/cst['revenue2014']
 
 		cst['revenueChange'] = revenueChange
 
