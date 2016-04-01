@@ -1397,7 +1397,7 @@ def rule_delete():
 		print(traceback.format_exc())
 	return jsonify({'data': response_data})
 
-@app.route('/rule/getcolumns')
+@app.route('/rule/getcolumns',methods=['POST'])
 @cross_origin()
 def getRuleColumns():
 	response_data = {}
@@ -1410,7 +1410,7 @@ def getRuleColumns():
 
 		data = col.find_one(queryDict)
 		if data:
-			keys = data[0].keys()
+			keys = data.keys()
 		else:
 			keys = []
 		response_data['columns'] = keys
@@ -1419,7 +1419,7 @@ def getRuleColumns():
 		print(traceback.format_exc())
 	return jsonify({'data': response_data})
 
-@app.route('/rule/nameexists')
+@app.route('/rule/nameexists',methods=['POST'])
 @cross_origin()
 def checkRuleExists():
 	response_data = {}
