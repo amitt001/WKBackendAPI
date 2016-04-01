@@ -627,7 +627,10 @@ def summaryData(queryDict, **kwargs):
 		if clusterData['revenue2014'] is None or clusterData['revenue2014'] == '':
 			clusterData['revenue2014'] = 0
 
-		clusterData['revenueChange'] = (clusterData['revenue2015']-clusterData['revenue2014'])*100.0/clusterData['revenue2014']
+		if clusterData['revenue2014'] == 0:
+			clusterData['revenueChange'] = "N/A"
+		else:
+			clusterData['revenueChange'] = (clusterData['revenue2015']-clusterData['revenue2014'])*100.0/clusterData['revenue2014']
 
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
