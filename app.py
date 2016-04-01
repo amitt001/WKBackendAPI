@@ -621,6 +621,14 @@ def summaryData(queryDict, **kwargs):
 									{'_id':'', 'revenue2013': 
 									{'$sum':'$revenue2013'}}}]))[0]['revenue2013']
 
+		if clusterData['revenue2015'] is None or clusterData['revenue2015'] == '':
+			clusterData['revenue2015'] = 0
+
+		if clusterData['revenue2014'] is None or clusterData['revenue2014'] == '':
+			clusterData['revenue2014'] = 0
+
+		clusterData['revenueChange'] = (clusterData['revenue2015']-clusterData['revenue2014'])*100.0/clusterData['revenue2014']
+
 		if kwargs.get('is_map'):
 			clusterData['yr3BaseSaleAmt'] = sum(map(
 											lambda x:int(x['yr3BaseSaleAmt']), 
@@ -659,7 +667,11 @@ def summaryData(queryDict, **kwargs):
 						"revenue2015": "", 
 						"noOfEmail": "", 
 						"noOfAddress": "", 
-						"noOfPhone": ""}
+						"noOfPhone": "",
+						"revenueChange" : "",
+						"revenue2014" : "",
+						"revenue2013" : ""
+						}
 		if kwargs.get('is_map'):
 			clusterData.update({'yr3BaseSaleAmt': ""})
 
@@ -964,6 +976,19 @@ def ctBusinessLocation():
 
 		if cst.get('globalUltDunsName',None) is not None and cst['globalUltDunsName'] == 'Unknown':
 			cst['globalUltDunsName'] = ""
+
+		if cst['revenue2014'] is None:
+			doc['revenue2014'] = 0
+
+		if cst['revenue2015'] is None:
+			doc['revenue2015'] = 0
+
+		if doc['revenue2014'] == 0:
+			revenueChange = "N/A"
+		else:
+			revenueChange = (doc['revenue2015'] - doc['revenue2014'])*100.0/doc['revenue2014']
+
+		cst['revenueChange'] = revenueChange
 
 		response_data.append(cst)
 	return jsonify({'data': response_data})
