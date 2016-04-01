@@ -1625,7 +1625,7 @@ def rule_delete():
 
 @app.route('/rule/getcloumns')
 @cross_origin()
-def rule_columns():
+def getRuleColumns():
 	response_data = {}
 	try:
 		col = db.LinkageOp1
@@ -1644,7 +1644,34 @@ def rule_columns():
 	except Exception as err:
 		import traceback
 		print(traceback.format_exc())
-	return response_data
+	return jsonify({'data': response_data})
+
+@app.route('/rule/getname')
+@cross_origin()
+def getRuleName():
+	response_data = {}
+	try:
+		col = db.Rules
+		queryDict = {}
+
+		payload = ast.literal_eval(request.data)
+		queryDict['ruleName'] = payload['ruleName']
+		queryDict['source'] = payload['source']
+		queryDict['version'] = payload['version']
+
+		data = col.find_one(queryDict)
+		if data:
+			if data['ruleName'] == queryDict['ruleName']:
+				response_data[queryDict['ruleName']] = True
+			else:
+				response_data[queryDict['ruleName']] = False
+		else:
+			response_data[queryDict['ruleName']] = False
+	except Exception as err:
+		response_data[queryDict['ruleName']] = False
+		import traceback
+		print(traceback.format_exc())
+	return jsonify({'data': response_data})
 
 
 if __name__ == '__main__':
