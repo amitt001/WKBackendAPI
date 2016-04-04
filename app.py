@@ -637,9 +637,6 @@ def summaryData(queryDict, **kwargs):
 											lambda x:int(x['yr3BaseSaleAmt']), 
 											list(col.find(queryDict, {'_id':0, 'yr3BaseSaleAmt':1}))))
 		
-		# email_pattern = re.compile(mapping.email_pattern)
-		# clusterData['num_invalid_email'] = len(custData['cEmail']) - len(filter(lambda x:x, map(lambda x:re.match(email_pattern,x), custData['cEmail'])))
-
 		custData = list(col.aggregate([{
 								'$match': queryDict},{
 								'$unwind': "$customer"},{
@@ -647,6 +644,8 @@ def summaryData(queryDict, **kwargs):
 									'$addToSet': '$customer.cEmail'}, 
 									'cPhone':{'$addToSet': '$customer.cPhone'}, 
 									'cAddress':{'$addToSet':'$customer.cAddress'}}}]))[0]
+		email_pattern = re.compile(mapping.email_pattern)
+		clusterData['num_invalid_email'] = len(custData['cEmail']) - len(filter(lambda x:x, map(lambda x:re.match(email_pattern,x), custData['cEmail'])))
 
 		for itm in ['cEmail', 'cAddress', 'cPhone']:
 			clusterData['noOf'+itm.lstrip('c')] = len(
