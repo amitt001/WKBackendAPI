@@ -10,6 +10,7 @@ import ast
 import requests
 import re
 import traceback
+import Levenshtein
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -468,12 +469,23 @@ def getTraceability():
 	clusterId = payload['clusterId']
 
 	queryDict = {"source":source,"version":version,"cstNum":cstNum,"clusterId":clusterId}
-	e1ClusterId = db.LinkageOp1.find_one(queryDict,{"e1ClusterId":1,"_id":0})['e1ClusterId']
+	data = db.LinkageOp1.find_one(queryDict,{"e1ClusterId":1,"_id":0, "cstName": 1, "address":1})
+	
+	e1ClusterId = data['e1ClusterId'
+	name = data['cstName']
+	address = data['address']
+	
 	opData = []
 	if e1ClusterId is not None:
 		queryDict.pop("cstNum")
 		queryDict['e1ClusterId'] = e1ClusterId
 		opData = list(db.LinkageOp1.find(queryDict,{"cstName":1,"cstNum":1,"globalUltDunsName":1,"globalUltDunsNum":1,"_id":0,"address":1}))
+		for dt in opData:
+			if Levenshtein.ratio(address or '', dt['address'] or '') > 0.8:
+				dt['addressMatch'] = True
+			else:
+				dt['addressMatch'] = False
+			
 	return jsonify(**{"data":opData})
 
 
